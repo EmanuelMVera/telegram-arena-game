@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:3000");
+// Detecta si estás en local o en producción
+const socketURL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
+const socket = io(socketURL);
 
 type PlayerData = {
   id: string;
