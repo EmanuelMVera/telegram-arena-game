@@ -1,60 +1,126 @@
-import './style.css'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.ts'
+import Phaser from "phaser";
+import { io } from "socket.io-client";
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+const socket = io("http://localhost:3000");
 
-<div class="ticks"></div>
+type PlayerData = {
+  id: string;
+  x: number;
+  y: number;
+  color: string;
+};
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+class GameScene extends Phaser.Scene {
+  private player!: Phaser.Physics.Arcade.Sprite;
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private otherPlayers: Record<string, Phaser.GameObjects.Rectangle> = {};
+  private lastSent = 0;
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+  constructor() {
+    super("GameScene");
+  }
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+  preload() {}
+
+  create() {
+    this.physics.world.setBounds(0, 0, 900, 500);
+
+    const ground = this.add.rectangle(450, 460, 900, 4, 0xffffff);
+    this.physics.add.existing(ground, true);
+
+    this.player = this.physics.add.sprite(100, 300, "");
+    this.player.setDisplaySize(40, 40);
+    this.player.setTint(0x00ff00);
+    this.player.setCollideWorldBounds(true);
+    this.player.setBounce(0.2);
+
+    this.physics.add.collider(this.player, ground);
+
+    this.cursors = this.input.keyboard!.createCursorKeys();
+
+    socket.on("currentPlayers", (players: Record<string, PlayerData>) => {
+      Object.values(players).forEach((p) => {
+        if (p.id === socket.id) {
+          this.player.setPosition(p.x, p.y);
+        } else {
+          this.addOtherPlayer(p);
+        }
+      });
+    });
+
+    socket.on("playerJoined", (p: PlayerData) => {
+      this.addOtherPlayer(p);
+    });
+
+    socket.on("playerMoved", (p: PlayerData) => {
+      const other = this.otherPlayers[p.id];
+      if (other) {
+        other.setPosition(p.x, p.y);
+      }
+    });
+
+    socket.on("playerLeft", (id: string) => {
+      this.otherPlayers[id]?.destroy();
+      delete this.otherPlayers[id];
+    });
+  }
+
+  update(time: number) {
+    const speed = 220;
+
+    this.player.setVelocityX(0);
+
+    if (this.cursors.left?.isDown) {
+      this.player.setVelocityX(-speed);
+    }
+
+    if (this.cursors.right?.isDown) {
+      this.player.setVelocityX(speed);
+    }
+
+    if (this.cursors.up?.isDown && this.player.body?.blocked.down) {
+      this.player.setVelocityY(-420);
+    }
+
+    if (time - this.lastSent > 30) {
+      socket.emit("playerMove", {
+        x: this.player.x,
+        y: this.player.y,
+      });
+
+      this.lastSent = time;
+    }
+  }
+
+  private addOtherPlayer(p: PlayerData) {
+    if (this.otherPlayers[p.id]) return;
+
+    const rect = this.add.rectangle(
+      p.x,
+      p.y,
+      40,
+      40,
+      Number(p.color.replace("#", "0x")),
+    );
+
+    this.otherPlayers[p.id] = rect;
+  }
+}
+
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  width: 900,
+  height: 500,
+  backgroundColor: "#111111",
+  parent: "app",
+  physics: {
+    default: "arcade",
+    arcade: {
+      gravity: { y: 900, x: 0 },
+      debug: false,
+    },
+  },
+  scene: GameScene,
+};
+
+new Phaser.Game(config);
