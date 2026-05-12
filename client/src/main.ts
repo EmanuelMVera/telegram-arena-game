@@ -1,7 +1,76 @@
 import Phaser from "phaser";
 import { io } from "socket.io-client";
+import "./style.css";
 
-// Detecta si estás en local o en producción
+const tg = window.Telegram?.WebApp;
+
+tg?.ready();
+tg?.expand();
+
+try {
+  tg?.requestFullscreen?.();
+} catch {
+  console.log("Fullscreen no disponible en esta plataforma");
+}
+
+const platform = tg?.platform;
+
+const isTelegramMobile = platform === "android" || platform === "ios";
+
+if (isTelegramMobile) {
+  document.body.classList.add("telegram-mobile");
+}
+
+function isPortrait() {
+  return window.innerHeight > window.innerWidth;
+}
+
+function updateOrientationMode() {
+  if (!isTelegramMobile) return;
+
+  if (isPortrait()) {
+    document.body.classList.add("portrait-mode");
+  } else {
+    document.body.classList.remove("portrait-mode");
+  }
+}
+
+window.addEventListener("resize", updateOrientationMode);
+window.addEventListener("orientationchange", updateOrientationMode);
+
+updateOrientationMode();
+
+const mobileInput = {
+  left: false,
+  right: false,
+  jump: false,
+};
+
+function bindMobileButton(id: string, key: keyof typeof mobileInput) {
+  const button = document.getElementById(id);
+
+  if (!button) return;
+
+  const press = (event: Event) => {
+    event.preventDefault();
+    mobileInput[key] = true;
+  };
+
+  const release = (event: Event) => {
+    event.preventDefault();
+    mobileInput[key] = false;
+  };
+
+  button.addEventListener("pointerdown", press);
+  button.addEventListener("pointerup", release);
+  button.addEventListener("pointercancel", release);
+  button.addEventListener("pointerleave", release);
+}
+
+bindMobileButton("btn-left", "left");
+bindMobileButton("btn-right", "right");
+bindMobileButton("btn-jump", "jump");
+
 const socketURL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
 const socket = io(socketURL);
 
@@ -56,6 +125,7 @@ class GameScene extends Phaser.Scene {
 
     socket.on("playerMoved", (p: PlayerData) => {
       const other = this.otherPlayers[p.id];
+
       if (other) {
         other.setPosition(p.x, p.y);
       }
@@ -70,17 +140,21 @@ class GameScene extends Phaser.Scene {
   update(time: number) {
     const speed = 220;
 
+    const moveLeft = this.cursors.left?.isDown || mobileInput.left;
+    const moveRight = this.cursors.right?.isDown || mobileInput.right;
+    const jump = this.cursors.up?.isDown || mobileInput.jump;
+
     this.player.setVelocityX(0);
 
-    if (this.cursors.left?.isDown) {
+    if (moveLeft) {
       this.player.setVelocityX(-speed);
     }
 
-    if (this.cursors.right?.isDown) {
+    if (moveRight) {
       this.player.setVelocityX(speed);
     }
 
-    if (this.cursors.up?.isDown && this.player.body?.blocked.down) {
+    if (jump && this.player.body?.blocked.down) {
       this.player.setVelocityY(-420);
     }
 
@@ -115,6 +189,10 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 500,
   backgroundColor: "#111111",
   parent: "app",
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
   physics: {
     default: "arcade",
     arcade: {

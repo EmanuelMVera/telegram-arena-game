@@ -12,9 +12,11 @@ type Player = {
 
 const app = express();
 
+const clientURL = process.env.CLIENT_URL || "http://localhost:5173";
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: clientURL,
   }),
 );
 
@@ -22,7 +24,8 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: clientURL,
+    methods: ["GET", "POST"],
   },
 });
 
@@ -61,6 +64,8 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(3000, () => {
-  console.log("Servidor escuchando en http://localhost:3000");
+const PORT = Number(process.env.PORT) || 3000;
+
+httpServer.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`);
 });
