@@ -25,7 +25,7 @@ export class LoadingScene extends Phaser.Scene {
     this.createLogo(width, height);
     this.createParticles(width, height);
     this.createLoadingBar(width, height);
-    this.createLoadingText(width, height);
+    this.createLoadingText(width);
 
     this.load.on("progress", (value: number) => {
       this.updateProgressBar(value);
@@ -235,7 +235,7 @@ export class LoadingScene extends Phaser.Scene {
     this.updateProgressBar(0);
   }
 
-  private createLoadingText(width: number, height: number) {
+  private createLoadingText(width: number) {
     this.loadingText = this.add.text(
       width / 2,
       this.barY - 34,
