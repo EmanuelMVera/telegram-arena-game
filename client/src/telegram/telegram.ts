@@ -8,6 +8,8 @@ type TelegramUser = {
   photo_url?: string;
 };
 
+const PLAYER_ALIAS_STORAGE_KEY = "arena-brawler-player-alias";
+
 let orientationListenerEnabled = false;
 
 function getTelegramWebApp() {
@@ -46,6 +48,40 @@ function updateOrientationMode() {
   }
 }
 
+function getDefaultDisplayNameFromTelegram() {
+  const user = getTelegramUser();
+
+  if (!user) {
+    return "Guest Player";
+  }
+
+  return (
+    user.username ||
+    [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+    (user.id ? `Player ${user.id}` : "Player")
+  );
+}
+
+export function getSavedAlias() {
+  const alias = localStorage.getItem(PLAYER_ALIAS_STORAGE_KEY)?.trim();
+  return alias || null;
+}
+
+export function savePlayerAlias(alias: string) {
+  const cleanAlias = alias.trim();
+
+  if (!cleanAlias) {
+    localStorage.removeItem(PLAYER_ALIAS_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(PLAYER_ALIAS_STORAGE_KEY, cleanAlias.slice(0, 24));
+}
+
+export function getPlayerDisplayName() {
+  return getSavedAlias() || getDefaultDisplayNameFromTelegram() || "Player";
+}
+
 export function initializeTelegram() {
   const tg = getTelegramWebApp();
 
@@ -71,23 +107,11 @@ export function isTelegramMobile() {
   return platform === "android" || platform === "ios";
 }
 
-/*
-  Esta función ya NO activa el aviso de girar pantalla.
-  Solo deja preparada la clase base de Telegram Mobile.
-*/
-
 export function setupTelegramMobileLayout() {
   if (isTelegramMobile()) {
     document.body.classList.add("telegram-mobile");
   }
 }
-
-/*
-  Se llama al entrar a GameScene.
-  Activa:
-  - controles táctiles mobile
-  - aviso de girar celular si está vertical
-*/
 
 export function enableGameplayLayout() {
   if (!isTelegramMobile()) return;
@@ -103,13 +127,6 @@ export function enableGameplayLayout() {
   updateOrientationMode();
 }
 
-/*
-  Se llama al salir de GameScene.
-  Desactiva:
-  - controles táctiles mobile
-  - aviso de girar celular
-*/
-
 export function disableGameplayLayout() {
   document.body.classList.remove("gameplay-mode");
   document.body.classList.remove("portrait-mode");
@@ -119,14 +136,9 @@ export function getClientIdentity(): ClientIdentity {
   const user = getTelegramUser();
 
   if (user?.id) {
-    const name =
-      user.username ||
-      [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-      `Player ${user.id}`;
-
     return {
       id: `telegram:${user.id}`,
-      name,
+      name: getPlayerDisplayName(),
       source: "telegram",
       photoUrl: user.photo_url,
     };
@@ -134,7 +146,7 @@ export function getClientIdentity(): ClientIdentity {
 
   return {
     id: getGuestId(),
-    name: "Guest Player",
+    name: getPlayerDisplayName(),
     source: "guest",
   };
 }
