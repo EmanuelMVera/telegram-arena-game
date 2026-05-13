@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { io } from "socket.io-client";
-import "./styles.css";
+import "./style.css";
 
 const tg = window.Telegram?.WebApp;
 
