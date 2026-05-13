@@ -84,11 +84,13 @@ export function initializeTelegram() {
   try {
     tg?.requestFullscreen?.();
   } catch {
-    console.log("Fullscreen no disponible en esta plataforma");
+    // fullscreen not available on this platform
   }
 
   if (isTelegramMobile()) {
     document.body.classList.add("telegram-mobile");
+    // Lock to portrait for menu scenes — fullscreen must be active first
+    lockPortrait();
   }
 
   return tg;
@@ -106,25 +108,45 @@ export function setupTelegramMobileLayout() {
   }
 }
 
+export function lockPortrait() {
+  if (screen.orientation?.lock) {
+    screen.orientation.lock("portrait-primary").catch(
+      () => screen.orientation.lock("portrait").catch(() => {}),
+    );
+  }
+  const tg = getTelegramWebApp() as unknown as Record<string, unknown>;
+  if (typeof tg?.unlockOrientation === "function") {
+    (tg.unlockOrientation as () => void)();
+  }
+}
+
+export function lockLandscape() {
+  if (screen.orientation?.lock) {
+    screen.orientation.lock("landscape-primary").catch(
+      () => screen.orientation.lock("landscape").catch(() => {}),
+    );
+  }
+  // Supplement with Telegram API once the device has rotated
+  const tg = getTelegramWebApp() as unknown as Record<string, unknown>;
+  setTimeout(() => {
+    if (
+      screen.orientation?.type?.startsWith("landscape") &&
+      typeof tg?.lockOrientation === "function"
+    ) {
+      (tg.lockOrientation as () => void)();
+    }
+  }, 400);
+}
+
 export function enableGameplayLayout() {
   if (!isTelegramMobile()) return;
   document.body.classList.add("gameplay-mode");
-  const tg = getTelegramWebApp() as unknown as Record<string, unknown>;
-  if (typeof tg?.lockOrientation === "function") {
-    (tg.lockOrientation as () => void)();
-  } else {
-    screen.orientation?.lock?.("landscape").catch(() => {});
-  }
+  lockLandscape();
 }
 
 export function disableGameplayLayout() {
   document.body.classList.remove("gameplay-mode", "portrait-mode");
-  const tg = getTelegramWebApp() as unknown as Record<string, unknown>;
-  if (typeof tg?.unlockOrientation === "function") {
-    (tg.unlockOrientation as () => void)();
-  } else {
-    try { screen.orientation?.unlock?.(); } catch {}
-  }
+  lockPortrait();
 }
 
 export function getClientIdentity(): ClientIdentity {

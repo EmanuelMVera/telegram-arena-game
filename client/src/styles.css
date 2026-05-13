@@ -68,10 +68,43 @@ canvas {
 
 /*
   Los controles mobile SOLO aparecen durante la partida.
-  Antes estaban activos en todo el juego.
 */
-
 body.telegram-mobile.gameplay-mode #mobile-controls {
   display: block;
+}
+
+/* Botón de rotación manual — solo visible en mobile fuera del juego */
+
+#btn-orientation {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 50;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(2, 10, 20, 0.80);
+  border: 1.5px solid rgba(94, 232, 255, 0.55);
+  color: #5ee8ff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  touch-action: none;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+#btn-orientation:active {
+  background: rgba(14, 60, 80, 0.90);
+  border-color: rgba(94, 232, 255, 0.9);
+}
+
+body.telegram-mobile:not(.gameplay-mode) #btn-orientation {
+  display: flex;
 }
 
