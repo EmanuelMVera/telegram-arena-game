@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { LoadingScene } from "../scenes/LoadingScene";
+import { MainMenuScene } from "../scenes/MainMenuScene";
 import { GameScene } from "../scenes/GameScene";
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -8,7 +10,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   backgroundColor: "#111111",
   parent: "app",
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: {
@@ -18,5 +20,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: GameScene,
+  scene: [LoadingScene, MainMenuScene, GameScene],
 };
