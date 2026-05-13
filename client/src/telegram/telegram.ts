@@ -9,8 +9,7 @@ type TelegramUser = {
 };
 
 const PLAYER_ALIAS_STORAGE_KEY = "arena-brawler-player-alias";
-
-let orientationListenerEnabled = false;
+const AVATAR_INDEX_KEY = "arena-brawler-avatar-index";
 
 function getTelegramWebApp() {
   return window.Telegram?.WebApp;
@@ -34,20 +33,6 @@ function getGuestId() {
   return newId;
 }
 
-function isPortrait() {
-  return window.innerHeight > window.innerWidth;
-}
-
-function updateOrientationMode() {
-  if (!isTelegramMobile()) return;
-
-  if (isPortrait()) {
-    document.body.classList.add("portrait-mode");
-  } else {
-    document.body.classList.remove("portrait-mode");
-  }
-}
-
 function getDefaultDisplayNameFromTelegram() {
   const user = getTelegramUser();
 
@@ -60,6 +45,14 @@ function getDefaultDisplayNameFromTelegram() {
     [user.first_name, user.last_name].filter(Boolean).join(" ") ||
     (user.id ? `Player ${user.id}` : "Player")
   );
+}
+
+export function getSavedAvatarIndex(): number {
+  return parseInt(localStorage.getItem(AVATAR_INDEX_KEY) ?? "0", 10);
+}
+
+export function saveAvatarIndex(index: number): void {
+  localStorage.setItem(AVATAR_INDEX_KEY, String(index));
 }
 
 export function getSavedAlias() {
@@ -115,21 +108,23 @@ export function setupTelegramMobileLayout() {
 
 export function enableGameplayLayout() {
   if (!isTelegramMobile()) return;
-
   document.body.classList.add("gameplay-mode");
-
-  if (!orientationListenerEnabled) {
-    window.addEventListener("resize", updateOrientationMode);
-    window.addEventListener("orientationchange", updateOrientationMode);
-    orientationListenerEnabled = true;
+  const tg = getTelegramWebApp() as unknown as Record<string, unknown>;
+  if (typeof tg?.lockOrientation === "function") {
+    (tg.lockOrientation as () => void)();
+  } else {
+    screen.orientation?.lock?.("landscape").catch(() => {});
   }
-
-  updateOrientationMode();
 }
 
 export function disableGameplayLayout() {
-  document.body.classList.remove("gameplay-mode");
-  document.body.classList.remove("portrait-mode");
+  document.body.classList.remove("gameplay-mode", "portrait-mode");
+  const tg = getTelegramWebApp() as unknown as Record<string, unknown>;
+  if (typeof tg?.unlockOrientation === "function") {
+    (tg.unlockOrientation as () => void)();
+  } else {
+    try { screen.orientation?.unlock?.(); } catch {}
+  }
 }
 
 export function getClientIdentity(): ClientIdentity {

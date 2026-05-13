@@ -15,6 +15,8 @@ export class BootScene extends Phaser.Scene {
       "arena-brawler-logo",
       "/assets/ui/loading/arena-brawler-logo.png",
     );
+
+    this.load.image("avatars", "/assets/avatars/avatars.png");
   }
 
   create() {

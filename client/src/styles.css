@@ -24,36 +24,6 @@ canvas {
   display: block;
 }
 
-/* Aviso para girar el celular */
-
-#rotate-warning {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: #111111;
-  color: white;
-  text-align: center;
-  padding: 24px;
-}
-
-.rotate-warning__content {
-  max-width: 320px;
-}
-
-.rotate-warning__content h2 {
-  margin: 0 0 8px;
-  font-size: 28px;
-}
-
-.rotate-warning__content p {
-  margin: 0;
-  font-size: 16px;
-  opacity: 0.8;
-}
-
 /* Controles táctiles mobile */
 
 #mobile-controls {
@@ -105,15 +75,3 @@ body.telegram-mobile.gameplay-mode #mobile-controls {
   display: block;
 }
 
-/*
-  El aviso de girar pantalla SOLO aparece durante la partida.
-  Loading/Menu/Lobby pueden estar verticales.
-*/
-
-body.telegram-mobile.gameplay-mode.portrait-mode #rotate-warning {
-  display: flex;
-}
-
-body.telegram-mobile.gameplay-mode.portrait-mode #mobile-controls {
-  display: none;
-}
