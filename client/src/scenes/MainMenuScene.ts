@@ -148,12 +148,15 @@ export class MainMenuScene extends Phaser.Scene {
 
   private createPlayerCard(w: number, h: number) {
     const identity = getClientIdentity();
+    const isMobileLayout = h > w;
     const cx = w / 2;
-    const avatarR = Math.min(68, Math.round(Math.min(w * 0.115, h * 0.095)));
-    const avatarCy = h * 0.31;
+    const avatarR = isMobileLayout
+      ? Math.min(72, Math.round(Math.min(w * 0.17, h * 0.082)))
+      : Math.min(68, Math.round(Math.min(w * 0.115, h * 0.095)));
+    const avatarCy = isMobileLayout ? h * 0.36 : h * 0.31;
     const panelW = Math.min(w * 0.86, 440);
-    const panelH = Math.min(h * 0.43, 320);
-    const panelCy = h * 0.435;
+    const panelH = isMobileLayout ? Math.min(h * 0.34, 350) : Math.min(h * 0.43, 320);
+    const panelCy = isMobileLayout ? h * 0.50 : h * 0.435;
 
     // ── Rounded glass panel ───────────────────────────────────────────────────
     const panelG = this.add.graphics().setDepth(4);
@@ -187,7 +190,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // ── Avatar ring image (ornamental ring, center transparent) ───────────────
     // Sized so its inner opening sits just outside the avatar circle
-    const ringSize = avatarR * 3.2;
+    const ringSize = avatarR * 2.35;
     const ringImg = this.add.image(cx, avatarCy, 'avatar-ring')
       .setDisplaySize(ringSize, ringSize).setDepth(7);
     // Breathing pulse on the ring
@@ -203,7 +206,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // ── Orbiting dots (appear in front of the ring) ───────────────────────────
-    const orbitR = avatarR + 20;
+    const orbitR = avatarR + (isMobileLayout ? 16 : 20);
     const numDots = 7;
     const orbitState = { angle: 0 };
     const orbitDots = Array.from({ length: numDots }, (_, i) => {
@@ -243,24 +246,25 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     // ── Player name ───────────────────────────────────────────────────────────
-    const nameFs = Math.max(22, Math.round(Math.min(w * 0.062, 38)));
-    this.aliasText = this.add.text(cx, h * 0.510, getPlayerDisplayName(), {
+    const nameFs = Math.max(22, Math.round(Math.min(w * (isMobileLayout ? 0.076 : 0.062), 38)));
+    const nameY = isMobileLayout ? panelCy + panelH * 0.18 : h * 0.510;
+    this.aliasText = this.add.text(cx, nameY, getPlayerDisplayName(), {
       fontSize: `${nameFs}px`, color: '#e8feff', fontStyle: 'bold',
     }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 12).setDepth(6);
 
     // Separator
     const sepW2 = Math.min(w * 0.32, 140);
-    const sepY = h * 0.549;
+    const sepY = isMobileLayout ? panelCy + panelH * 0.30 : h * 0.549;
     const sepG = this.add.graphics().setDepth(5);
     sepG.lineStyle(1, 0x5ee8ff, 0.20);
     sepG.lineBetween(cx - sepW2 / 2, sepY, cx + sepW2 / 2, sepY);
     this.drawDiamond(cx, sepY, 3, 0x5ee8ff, 0.55).setDepth(5);
 
     // ── Action buttons (Alias / Avatar) ───────────────────────────────────────
-    const btnY = h * 0.577;
+    const btnY = isMobileLayout ? panelCy + panelH * 0.42 : h * 0.577;
     const halfGap = Math.min(panelW * 0.22, 100);
     const aBtnW = Math.min(panelW * 0.38, 148);
-    const aBtnH = 32;
+    const aBtnH = isMobileLayout ? 38 : 32;
 
     [
       {
@@ -284,7 +288,7 @@ export class MainMenuScene extends Phaser.Scene {
       };
       drawABtn(false);
       const abTxt = this.add.text(x, btnY, label, {
-        fontSize: '12px', color: '#8eefff', fontStyle: 'bold',
+        fontSize: isMobileLayout ? '13px' : '12px', color: '#8eefff', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(7);
       const abHit = this.add.rectangle(x, btnY, aBtnW, aBtnH).setDepth(8).setInteractive({ useHandCursor: true });
       abHit.on('pointerover', () => { drawABtn(true); abTxt.setColor('#d4fbff'); });
@@ -397,10 +401,12 @@ export class MainMenuScene extends Phaser.Scene {
   // ── MAIN BUTTONS (image-based with glow fx) ───────────────────────────────────
 
   private createButtons(w: number, h: number) {
+    const isMobileLayout = h > w;
     const cx = w / 2;
     const maxBtnW = Math.min(w * 0.88, 520);
-    const startY = h * 0.655;
-    const spacing = Math.min(80, Math.round((h * 0.945 - startY) / 2.5));
+    const startY = isMobileLayout ? h * 0.70 : h * 0.655;
+    const availableH = h * 0.90 - startY;
+    const spacing = Math.max(isMobileLayout ? 82 : 74, Math.min(110, Math.round(availableH / 1.45)));
 
     const defs: { key: string; mode: 'create' | 'join' }[] = [
       { key: 'btn-create', mode: 'create' },
@@ -414,7 +420,8 @@ export class MainMenuScene extends Phaser.Scene {
       const btn = this.add.image(cx, by, key)
         .setDepth(8)
         .setInteractive({ useHandCursor: true });
-      const scale = Math.min(maxBtnW / btn.width, 90 / btn.height);
+      const targetHeight = isMobileLayout ? 82 : 90;
+      const scale = Math.min(maxBtnW / btn.width, targetHeight / btn.height);
       btn.setScale(scale);
       const dW = btn.displayWidth;
       const dH = btn.displayHeight;
