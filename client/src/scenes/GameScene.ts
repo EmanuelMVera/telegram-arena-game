@@ -1,9 +1,13 @@
-import Phaser from "phaser";
-import { mobileInput } from "../input/mobileInput";
-import { socket } from "../network/socket";
-import { getClientIdentity } from "../telegram/telegram";
-import type { Direction, PlayerData } from "../types/player";
-import { createHud, updateHud } from "../ui/hud";
+import Phaser from 'phaser';
+import { mobileInput } from '../input/mobileInput';
+import { socket } from '../network/socket';
+import {
+  getClientIdentity,
+  disableGameplayLayout,
+  enableGameplayLayout,
+} from '../telegram/telegram';
+import type { Direction, PlayerData } from '../types/player';
+import { createHud, updateHud } from '../ui/hud';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -19,7 +23,7 @@ export class GameScene extends Phaser.Scene {
 
   private localPlayerId: string | null = null;
   private lastSent = 0;
-  private currentDirection: Direction = "right";
+  private currentDirection: Direction = 'right';
 
   private wasJumpPressed = false;
   private wasAttackPressed = false;
@@ -38,12 +42,18 @@ export class GameScene extends Phaser.Scene {
   private readonly localAttackCooldown = 500;
 
   constructor() {
-    super("GameScene");
+    super('GameScene');
   }
 
   preload() {}
 
   create() {
+    enableGameplayLayout();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      disableGameplayLayout();
+    });
+
     this.createPlayerTexture();
 
     this.physics.world.setBounds(0, 0, 900, 500);
@@ -51,7 +61,7 @@ export class GameScene extends Phaser.Scene {
     const ground = this.add.rectangle(450, 460, 900, 4, 0xffffff);
     this.physics.add.existing(ground, true);
 
-    this.player = this.physics.add.sprite(100, 300, "player-square");
+    this.player = this.physics.add.sprite(100, 300, 'player-square');
     this.player.setDisplaySize(40, 40);
     this.player.setTint(0x00ff00);
     this.player.setCollideWorldBounds(true);
@@ -75,7 +85,7 @@ export class GameScene extends Phaser.Scene {
 
     this.registerSocketEvents();
 
-    socket.emit("joinGame", getClientIdentity());
+    socket.emit('joinGame', getClientIdentity());
   }
 
   update(time: number) {
@@ -103,12 +113,12 @@ export class GameScene extends Phaser.Scene {
     this.player.setAccelerationX(0);
 
     if (moveLeft) {
-      this.currentDirection = "left";
+      this.currentDirection = 'left';
       this.player.setAccelerationX(-this.acceleration);
     }
 
     if (moveRight) {
-      this.currentDirection = "right";
+      this.currentDirection = 'right';
       this.player.setAccelerationX(this.acceleration);
     }
 
@@ -137,14 +147,14 @@ export class GameScene extends Phaser.Scene {
         this.player.y,
         this.currentDirection,
       );
-      socket.emit("playerAttack");
+      socket.emit('playerAttack');
       this.lastLocalAttackTime = time;
     }
 
     this.wasAttackPressed = attackPressed;
 
     if (time - this.lastSent > 30) {
-      socket.emit("playerMove", {
+      socket.emit('playerMove', {
         x: this.player.x,
         y: this.player.y,
         direction: this.currentDirection,
@@ -155,11 +165,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private registerSocketEvents() {
-    socket.on("localPlayer", (data: { id: string }) => {
+    socket.on('localPlayer', (data: { id: string }) => {
       this.localPlayerId = data.id;
     });
 
-    socket.on("currentPlayers", (players: Record<string, PlayerData>) => {
+    socket.on('currentPlayers', (players: Record<string, PlayerData>) => {
       this.playerData = players;
 
       Object.values(players).forEach((player) => {
@@ -174,7 +184,7 @@ export class GameScene extends Phaser.Scene {
       this.refreshHud();
     });
 
-    socket.on("playerJoined", (player: PlayerData) => {
+    socket.on('playerJoined', (player: PlayerData) => {
       this.playerData[player.id] = player;
 
       if (player.id !== this.localPlayerId) {
@@ -185,7 +195,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     socket.on(
-      "playerMoved",
+      'playerMoved',
       (player: { id: string; x: number; y: number; direction: Direction }) => {
         const currentPlayer = this.playerData[player.id];
 
@@ -204,7 +214,7 @@ export class GameScene extends Phaser.Scene {
       },
     );
 
-    socket.on("playersUpdated", (players: Record<string, PlayerData>) => {
+    socket.on('playersUpdated', (players: Record<string, PlayerData>) => {
       this.playerData = players;
 
       this.removeDisconnectedRemotePlayers(players);
@@ -229,7 +239,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     socket.on(
-      "attackVisual",
+      'attackVisual',
       (data: {
         attackerId: string;
         x: number;
@@ -243,22 +253,22 @@ export class GameScene extends Phaser.Scene {
     );
 
     socket.on(
-      "hitVisual",
+      'hitVisual',
       (data: { targetId: string; x: number; y: number }) => {
         this.showHitEffect(data.x, data.y);
       },
     );
 
-    socket.on("playerKilled", () => {
+    socket.on('playerKilled', () => {
       this.cameras.main.shake(120, 0.004);
     });
 
-    socket.on("duplicateConnection", () => {
-      alert("Esta cuenta se abrió en otro dispositivo.");
+    socket.on('duplicateConnection', () => {
+      alert('Esta cuenta se abrió en otro dispositivo.');
       socket.disconnect();
     });
 
-    socket.on("playerLeft", (id: string) => {
+    socket.on('playerLeft', (id: string) => {
       this.otherPlayers[id]?.destroy();
       this.otherPlayerLabels[id]?.destroy();
 
@@ -278,13 +288,13 @@ export class GameScene extends Phaser.Scene {
       player.y,
       40,
       40,
-      Number(player.color.replace("#", "0x")),
+      Number(player.color.replace('#', '0x')),
     );
 
-    const label = this.add.text(player.x - 34, player.y - 44, "", {
-      fontSize: "11px",
-      color: "#ffffff",
-      backgroundColor: "rgba(0, 0, 0, 0.45)",
+    const label = this.add.text(player.x - 34, player.y - 44, '', {
+      fontSize: '11px',
+      color: '#ffffff',
+      backgroundColor: 'rgba(0, 0, 0, 0.45)',
       padding: {
         x: 4,
         y: 2,
@@ -329,7 +339,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showAttackEffect(x: number, y: number, direction: Direction) {
-    const offsetX = direction === "right" ? 52 : -52;
+    const offsetX = direction === 'right' ? 52 : -52;
 
     const attackBox = this.add.rectangle(
       x + offsetX,
@@ -370,14 +380,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPlayerTexture() {
-    if (this.textures.exists("player-square")) return;
+    if (this.textures.exists('player-square')) return;
 
     const graphics = this.add.graphics();
 
     graphics.lineStyle(3, 0xffffff);
     graphics.strokeRect(0, 0, 40, 40);
     graphics.lineBetween(0, 0, 40, 40);
-    graphics.generateTexture("player-square", 40, 40);
+    graphics.generateTexture('player-square', 40, 40);
     graphics.destroy();
   }
 }

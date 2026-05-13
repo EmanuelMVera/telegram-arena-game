@@ -96,14 +96,24 @@ canvas {
   user-select: none;
 }
 
-body.telegram-mobile #mobile-controls {
+/*
+  Los controles mobile SOLO aparecen durante la partida.
+  Antes estaban activos en todo el juego.
+*/
+
+body.telegram-mobile.gameplay-mode #mobile-controls {
   display: block;
 }
 
-body.telegram-mobile.portrait-mode #rotate-warning {
+/*
+  El aviso de girar pantalla SOLO aparece durante la partida.
+  Loading/Menu/Lobby pueden estar verticales.
+*/
+
+body.telegram-mobile.gameplay-mode.portrait-mode #rotate-warning {
   display: flex;
 }
 
-body.telegram-mobile.portrait-mode #mobile-controls {
+body.telegram-mobile.gameplay-mode.portrait-mode #mobile-controls {
   display: none;
 }

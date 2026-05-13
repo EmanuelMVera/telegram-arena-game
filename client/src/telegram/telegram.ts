@@ -8,6 +8,8 @@ type TelegramUser = {
   photo_url?: string;
 };
 
+let orientationListenerEnabled = false;
+
 function getTelegramWebApp() {
   return window.Telegram?.WebApp;
 }
@@ -30,6 +32,20 @@ function getGuestId() {
   return newId;
 }
 
+function isPortrait() {
+  return window.innerHeight > window.innerWidth;
+}
+
+function updateOrientationMode() {
+  if (!isTelegramMobile()) return;
+
+  if (isPortrait()) {
+    document.body.classList.add("portrait-mode");
+  } else {
+    document.body.classList.remove("portrait-mode");
+  }
+}
+
 export function initializeTelegram() {
   const tg = getTelegramWebApp();
 
@@ -42,6 +58,10 @@ export function initializeTelegram() {
     console.log("Fullscreen no disponible en esta plataforma");
   }
 
+  if (isTelegramMobile()) {
+    document.body.classList.add("telegram-mobile");
+  }
+
   return tg;
 }
 
@@ -51,31 +71,48 @@ export function isTelegramMobile() {
   return platform === "android" || platform === "ios";
 }
 
-export function setupTelegramMobileLayout() {
-  const mobile = isTelegramMobile();
+/*
+  Esta función ya NO activa el aviso de girar pantalla.
+  Solo deja preparada la clase base de Telegram Mobile.
+*/
 
-  if (mobile) {
+export function setupTelegramMobileLayout() {
+  if (isTelegramMobile()) {
     document.body.classList.add("telegram-mobile");
   }
+}
 
-  function isPortrait() {
-    return window.innerHeight > window.innerWidth;
+/*
+  Se llama al entrar a GameScene.
+  Activa:
+  - controles táctiles mobile
+  - aviso de girar celular si está vertical
+*/
+
+export function enableGameplayLayout() {
+  if (!isTelegramMobile()) return;
+
+  document.body.classList.add("gameplay-mode");
+
+  if (!orientationListenerEnabled) {
+    window.addEventListener("resize", updateOrientationMode);
+    window.addEventListener("orientationchange", updateOrientationMode);
+    orientationListenerEnabled = true;
   }
-
-  function updateOrientationMode() {
-    if (!mobile) return;
-
-    if (isPortrait()) {
-      document.body.classList.add("portrait-mode");
-    } else {
-      document.body.classList.remove("portrait-mode");
-    }
-  }
-
-  window.addEventListener("resize", updateOrientationMode);
-  window.addEventListener("orientationchange", updateOrientationMode);
 
   updateOrientationMode();
+}
+
+/*
+  Se llama al salir de GameScene.
+  Desactiva:
+  - controles táctiles mobile
+  - aviso de girar celular
+*/
+
+export function disableGameplayLayout() {
+  document.body.classList.remove("gameplay-mode");
+  document.body.classList.remove("portrait-mode");
 }
 
 export function getClientIdentity(): ClientIdentity {
