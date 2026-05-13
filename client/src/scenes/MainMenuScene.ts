@@ -148,12 +148,15 @@ export class MainMenuScene extends Phaser.Scene {
 
   private createPlayerCard(w: number, h: number) {
     const identity = getClientIdentity();
+    const isMobileLayout = h > w;
     const cx = w / 2;
-    const avatarR = Math.min(68, Math.round(Math.min(w * 0.115, h * 0.095)));
-    const avatarCy = h * 0.31;
+    const avatarR = isMobileLayout
+      ? Math.min(72, Math.round(Math.min(w * 0.17, h * 0.082)))
+      : Math.min(68, Math.round(Math.min(w * 0.115, h * 0.095)));
+    const avatarCy = isMobileLayout ? h * 0.36 : h * 0.31;
     const panelW = Math.min(w * 0.86, 440);
-    const panelH = Math.min(h * 0.43, 320);
-    const panelCy = h * 0.435;
+    const panelH = isMobileLayout ? Math.min(h * 0.34, 350) : Math.min(h * 0.43, 320);
+    const panelCy = isMobileLayout ? h * 0.50 : h * 0.435;
 
     // ── Rounded glass panel ───────────────────────────────────────────────────
     const panelG = this.add.graphics().setDepth(4);
@@ -174,20 +177,23 @@ export class MainMenuScene extends Phaser.Scene {
     // Dark bg behind avatar (keeps mask clean)
     this.add.circle(cx, avatarCy, avatarR + 2, 0x020d1a, 1).setDepth(5);
 
+    const ringSize = avatarR * 2.45;
+    const avatarMaskR = ringSize * 0.39;
+    const avatarDisplaySize = ringSize * 0.98;
+
     // ── Avatar mask ───────────────────────────────────────────────────────────
     const maskG = this.add.graphics().setAlpha(0).setDepth(0);
     maskG.fillStyle(0xffffff);
-    maskG.fillCircle(cx, avatarCy, avatarR);
+    maskG.fillCircle(cx, avatarCy, avatarMaskR);
     const mask = maskG.createGeometryMask();
 
-    // ── Avatar image (3.2× so artwork fills the circle completely) ────────────
+    // ── Avatar image (locked to ring size so it never overflows the frame) ───
     const savedIdx = getSavedAvatarIndex();
     this.avatarImage = this.add.image(cx, avatarCy, 'avatars', String(savedIdx))
-      .setDisplaySize(avatarR * 3.2, avatarR * 3.2).setMask(mask).setDepth(6);
+      .setDisplaySize(avatarDisplaySize, avatarDisplaySize).setMask(mask).setDepth(6);
 
     // ── Avatar ring image (ornamental ring, center transparent) ───────────────
-    // Sized so its inner opening sits just outside the avatar circle
-    const ringSize = avatarR * 3.2;
+    // Sized in sync with avatar display/mask to avoid visual mismatch
     const ringImg = this.add.image(cx, avatarCy, 'avatar-ring')
       .setDisplaySize(ringSize, ringSize).setDepth(7);
     // Breathing pulse on the ring
@@ -203,7 +209,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // ── Orbiting dots (appear in front of the ring) ───────────────────────────
-    const orbitR = avatarR + 20;
+    const orbitR = avatarR + (isMobileLayout ? 16 : 20);
     const numDots = 7;
     const orbitState = { angle: 0 };
     const orbitDots = Array.from({ length: numDots }, (_, i) => {
@@ -230,12 +236,12 @@ export class MainMenuScene extends Phaser.Scene {
     if (identity.photoUrl) {
       const photoKey = `tg-avatar-${identity.id}`;
       if (this.textures.exists(photoKey)) {
-        this.avatarImage.setTexture(photoKey).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+        this.avatarImage.setTexture(photoKey).setDisplaySize(avatarDisplaySize, avatarDisplaySize);
       } else {
         this.load.image(photoKey, identity.photoUrl);
         this.load.once(Phaser.Loader.Events.COMPLETE, () => {
           if (this.textures.exists(photoKey) && this.avatarImage?.active) {
-            this.avatarImage.setTexture(photoKey).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+            this.avatarImage.setTexture(photoKey).setDisplaySize(avatarDisplaySize, avatarDisplaySize);
           }
         });
         this.load.start();
@@ -243,24 +249,25 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     // ── Player name ───────────────────────────────────────────────────────────
-    const nameFs = Math.max(22, Math.round(Math.min(w * 0.062, 38)));
-    this.aliasText = this.add.text(cx, h * 0.510, getPlayerDisplayName(), {
+    const nameFs = Math.max(22, Math.round(Math.min(w * (isMobileLayout ? 0.076 : 0.062), 38)));
+    const nameY = isMobileLayout ? panelCy + panelH * 0.18 : h * 0.510;
+    this.aliasText = this.add.text(cx, nameY, getPlayerDisplayName(), {
       fontSize: `${nameFs}px`, color: '#e8feff', fontStyle: 'bold',
     }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 12).setDepth(6);
 
     // Separator
     const sepW2 = Math.min(w * 0.32, 140);
-    const sepY = h * 0.549;
+    const sepY = isMobileLayout ? panelCy + panelH * 0.30 : h * 0.549;
     const sepG = this.add.graphics().setDepth(5);
     sepG.lineStyle(1, 0x5ee8ff, 0.20);
     sepG.lineBetween(cx - sepW2 / 2, sepY, cx + sepW2 / 2, sepY);
     this.drawDiamond(cx, sepY, 3, 0x5ee8ff, 0.55).setDepth(5);
 
     // ── Action buttons (Alias / Avatar) ───────────────────────────────────────
-    const btnY = h * 0.577;
+    const btnY = isMobileLayout ? panelCy + panelH * 0.42 : h * 0.577;
     const halfGap = Math.min(panelW * 0.22, 100);
     const aBtnW = Math.min(panelW * 0.38, 148);
-    const aBtnH = 32;
+    const aBtnH = isMobileLayout ? 38 : 32;
 
     [
       {
@@ -284,7 +291,7 @@ export class MainMenuScene extends Phaser.Scene {
       };
       drawABtn(false);
       const abTxt = this.add.text(x, btnY, label, {
-        fontSize: '12px', color: '#8eefff', fontStyle: 'bold',
+        fontSize: isMobileLayout ? '13px' : '12px', color: '#8eefff', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(7);
       const abHit = this.add.rectangle(x, btnY, aBtnW, aBtnH).setDepth(8).setInteractive({ useHandCursor: true });
       abHit.on('pointerover', () => { drawABtn(true); abTxt.setColor('#d4fbff'); });
@@ -300,6 +307,7 @@ export class MainMenuScene extends Phaser.Scene {
     const { width: w, height: h } = this.scale;
     const cx = w / 2;
     const currentIdx = getSavedAvatarIndex();
+    const avatarDisplaySize = avatarR * 2.401;
 
     const overlay = this.add.rectangle(cx, h / 2, w, h, 0x000000, 0.84)
       .setDepth(25).setInteractive();
@@ -343,23 +351,24 @@ export class MainMenuScene extends Phaser.Scene {
 
       const mG = this.add.graphics().setAlpha(0).setDepth(0);
       mG.fillStyle(0xffffff);
-      mG.fillCircle(tx, ty, thumbR);
+      mG.fillCircle(tx, ty, thumbR * 0.95);
       const tMask = mG.createGeometryMask();
 
+      const thumbSize = thumbR * 2.45;
       const thumb = this.add.image(tx, ty, 'avatars', String(i))
-        .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setMask(tMask).setDepth(28)
+        .setDisplaySize(thumbSize, thumbSize).setMask(tMask).setDepth(28)
         .setInteractive({ useHandCursor: true });
 
       // Mini ring on each picker thumbnail
       if (this.textures.exists('avatar-ring')) {
         const miniRing = this.add.image(tx, ty, 'avatar-ring')
-          .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setDepth(29).setAlpha(0.75);
+          .setDisplaySize(thumbSize, thumbSize).setDepth(29).setAlpha(0.75);
         this.pickerObjects.push(miniRing);
       }
 
       thumb.on('pointerdown', () => {
         saveAvatarIndex(i);
-        this.avatarImage.setTexture('avatars', String(i)).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+        this.avatarImage.setTexture('avatars', String(i)).setDisplaySize(avatarDisplaySize, avatarDisplaySize);
         this.closeAvatarPicker();
       });
       thumb.on('pointerover', () => { if (i !== getSavedAvatarIndex()) drawBorder(false, true); });
@@ -397,10 +406,12 @@ export class MainMenuScene extends Phaser.Scene {
   // ── MAIN BUTTONS (image-based with glow fx) ───────────────────────────────────
 
   private createButtons(w: number, h: number) {
+    const isMobileLayout = h > w;
     const cx = w / 2;
     const maxBtnW = Math.min(w * 0.88, 520);
-    const startY = h * 0.655;
-    const spacing = Math.min(80, Math.round((h * 0.945 - startY) / 2.5));
+    const startY = isMobileLayout ? h * 0.70 : h * 0.655;
+    const availableH = h * 0.90 - startY;
+    const spacing = Math.max(isMobileLayout ? 82 : 74, Math.min(110, Math.round(availableH / 1.45)));
 
     const defs: { key: string; mode: 'create' | 'join' }[] = [
       { key: 'btn-create', mode: 'create' },
@@ -414,10 +425,11 @@ export class MainMenuScene extends Phaser.Scene {
       const btn = this.add.image(cx, by, key)
         .setDepth(8)
         .setInteractive({ useHandCursor: true });
-      const scale = Math.min(maxBtnW / btn.width, 90 / btn.height);
-      btn.setScale(scale);
-      const dW = btn.displayWidth;
-      const dH = btn.displayHeight;
+      const targetWidth = Math.min(maxBtnW, isMobileLayout ? w * 0.80 : w * 0.56);
+      const targetHeight = isMobileLayout ? 88 : 96;
+      btn.setDisplaySize(targetWidth, targetHeight);
+      const dW = targetWidth;
+      const dH = targetHeight;
 
       // ── Static drop-shadow ────────────────────────────────────────────────
       const shadow = this.add.graphics().setDepth(6).setAlpha(0.55);
@@ -467,7 +479,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.tweens.killTweensOf([btn, atmoGlow, rimGlow, shimmer]);
 
         // Scale up
-        this.tweens.add({ targets: btn, scaleX: scale * 1.03, scaleY: scale * 1.03, duration: 130, ease: 'Back.easeOut' });
+        this.tweens.add({ targets: btn, scaleX: 1.03, scaleY: 1.03, duration: 130, ease: 'Back.easeOut' });
         // Atmospheric glow fade in
         this.tweens.add({ targets: atmoGlow, alpha: 1, duration: 150 });
         // Rim fade in
@@ -482,7 +494,7 @@ export class MainMenuScene extends Phaser.Scene {
 
       btn.on('pointerout', () => {
         this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
-        this.tweens.add({ targets: btn, scaleX: scale, scaleY: scale, duration: 160, ease: 'Power2' });
+        this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 160, ease: 'Power2' });
         this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 0, duration: 220 });
         btn.clearTint();
       });
@@ -490,7 +502,7 @@ export class MainMenuScene extends Phaser.Scene {
       btn.on('pointerdown', () => {
         // Slight press-down scale
         this.tweens.killTweensOf(btn);
-        this.tweens.add({ targets: btn, scaleX: scale * 0.96, scaleY: scale * 0.96, duration: 65, yoyo: true, ease: 'Power2' });
+        this.tweens.add({ targets: btn, scaleX: 0.96, scaleY: 0.96, duration: 65, yoyo: true, ease: 'Power2' });
 
         // White flash then back to tint
         btn.setTint(0xffffff);
