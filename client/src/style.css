@@ -96,13 +96,9 @@ canvas {
   user-select: none;
 }
 
-/* Solo aparecen si el juego detecta Telegram Mobile */
-
 body.telegram-mobile #mobile-controls {
   display: block;
 }
-
-/* En vertical se muestra aviso y se ocultan controles */
 
 body.telegram-mobile.portrait-mode #rotate-warning {
   display: flex;
