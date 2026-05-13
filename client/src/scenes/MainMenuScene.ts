@@ -177,20 +177,23 @@ export class MainMenuScene extends Phaser.Scene {
     // Dark bg behind avatar (keeps mask clean)
     this.add.circle(cx, avatarCy, avatarR + 2, 0x020d1a, 1).setDepth(5);
 
+    const ringSize = avatarR * 2.45;
+    const avatarMaskR = ringSize * 0.39;
+    const avatarDisplaySize = ringSize * 0.98;
+
     // ── Avatar mask ───────────────────────────────────────────────────────────
     const maskG = this.add.graphics().setAlpha(0).setDepth(0);
     maskG.fillStyle(0xffffff);
-    maskG.fillCircle(cx, avatarCy, avatarR);
+    maskG.fillCircle(cx, avatarCy, avatarMaskR);
     const mask = maskG.createGeometryMask();
 
-    // ── Avatar image (3.2× so artwork fills the circle completely) ────────────
+    // ── Avatar image (locked to ring size so it never overflows the frame) ───
     const savedIdx = getSavedAvatarIndex();
     this.avatarImage = this.add.image(cx, avatarCy, 'avatars', String(savedIdx))
-      .setDisplaySize(avatarR * 3.2, avatarR * 3.2).setMask(mask).setDepth(6);
+      .setDisplaySize(avatarDisplaySize, avatarDisplaySize).setMask(mask).setDepth(6);
 
     // ── Avatar ring image (ornamental ring, center transparent) ───────────────
-    // Sized so its inner opening sits just outside the avatar circle
-    const ringSize = avatarR * 2.35;
+    // Sized in sync with avatar display/mask to avoid visual mismatch
     const ringImg = this.add.image(cx, avatarCy, 'avatar-ring')
       .setDisplaySize(ringSize, ringSize).setDepth(7);
     // Breathing pulse on the ring
@@ -233,12 +236,12 @@ export class MainMenuScene extends Phaser.Scene {
     if (identity.photoUrl) {
       const photoKey = `tg-avatar-${identity.id}`;
       if (this.textures.exists(photoKey)) {
-        this.avatarImage.setTexture(photoKey).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+        this.avatarImage.setTexture(photoKey).setDisplaySize(avatarDisplaySize, avatarDisplaySize);
       } else {
         this.load.image(photoKey, identity.photoUrl);
         this.load.once(Phaser.Loader.Events.COMPLETE, () => {
           if (this.textures.exists(photoKey) && this.avatarImage?.active) {
-            this.avatarImage.setTexture(photoKey).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+            this.avatarImage.setTexture(photoKey).setDisplaySize(avatarDisplaySize, avatarDisplaySize);
           }
         });
         this.load.start();
@@ -304,6 +307,7 @@ export class MainMenuScene extends Phaser.Scene {
     const { width: w, height: h } = this.scale;
     const cx = w / 2;
     const currentIdx = getSavedAvatarIndex();
+    const avatarDisplaySize = avatarR * 2.401;
 
     const overlay = this.add.rectangle(cx, h / 2, w, h, 0x000000, 0.84)
       .setDepth(25).setInteractive();
@@ -347,23 +351,24 @@ export class MainMenuScene extends Phaser.Scene {
 
       const mG = this.add.graphics().setAlpha(0).setDepth(0);
       mG.fillStyle(0xffffff);
-      mG.fillCircle(tx, ty, thumbR);
+      mG.fillCircle(tx, ty, thumbR * 0.95);
       const tMask = mG.createGeometryMask();
 
+      const thumbSize = thumbR * 2.45;
       const thumb = this.add.image(tx, ty, 'avatars', String(i))
-        .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setMask(tMask).setDepth(28)
+        .setDisplaySize(thumbSize, thumbSize).setMask(tMask).setDepth(28)
         .setInteractive({ useHandCursor: true });
 
       // Mini ring on each picker thumbnail
       if (this.textures.exists('avatar-ring')) {
         const miniRing = this.add.image(tx, ty, 'avatar-ring')
-          .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setDepth(29).setAlpha(0.75);
+          .setDisplaySize(thumbSize, thumbSize).setDepth(29).setAlpha(0.75);
         this.pickerObjects.push(miniRing);
       }
 
       thumb.on('pointerdown', () => {
         saveAvatarIndex(i);
-        this.avatarImage.setTexture('avatars', String(i)).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+        this.avatarImage.setTexture('avatars', String(i)).setDisplaySize(avatarDisplaySize, avatarDisplaySize);
         this.closeAvatarPicker();
       });
       thumb.on('pointerover', () => { if (i !== getSavedAvatarIndex()) drawBorder(false, true); });
@@ -420,11 +425,11 @@ export class MainMenuScene extends Phaser.Scene {
       const btn = this.add.image(cx, by, key)
         .setDepth(8)
         .setInteractive({ useHandCursor: true });
-      const targetHeight = isMobileLayout ? 82 : 90;
-      const scale = Math.min(maxBtnW / btn.width, targetHeight / btn.height);
-      btn.setScale(scale);
-      const dW = btn.displayWidth;
-      const dH = btn.displayHeight;
+      const targetWidth = Math.min(maxBtnW, isMobileLayout ? w * 0.80 : w * 0.56);
+      const targetHeight = isMobileLayout ? 88 : 96;
+      btn.setDisplaySize(targetWidth, targetHeight);
+      const dW = targetWidth;
+      const dH = targetHeight;
 
       // ── Static drop-shadow ────────────────────────────────────────────────
       const shadow = this.add.graphics().setDepth(6).setAlpha(0.55);
@@ -474,7 +479,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.tweens.killTweensOf([btn, atmoGlow, rimGlow, shimmer]);
 
         // Scale up
-        this.tweens.add({ targets: btn, scaleX: scale * 1.03, scaleY: scale * 1.03, duration: 130, ease: 'Back.easeOut' });
+        this.tweens.add({ targets: btn, scaleX: 1.03, scaleY: 1.03, duration: 130, ease: 'Back.easeOut' });
         // Atmospheric glow fade in
         this.tweens.add({ targets: atmoGlow, alpha: 1, duration: 150 });
         // Rim fade in
@@ -489,7 +494,7 @@ export class MainMenuScene extends Phaser.Scene {
 
       btn.on('pointerout', () => {
         this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
-        this.tweens.add({ targets: btn, scaleX: scale, scaleY: scale, duration: 160, ease: 'Power2' });
+        this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 160, ease: 'Power2' });
         this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 0, duration: 220 });
         btn.clearTint();
       });
@@ -497,7 +502,7 @@ export class MainMenuScene extends Phaser.Scene {
       btn.on('pointerdown', () => {
         // Slight press-down scale
         this.tweens.killTweensOf(btn);
-        this.tweens.add({ targets: btn, scaleX: scale * 0.96, scaleY: scale * 0.96, duration: 65, yoyo: true, ease: 'Power2' });
+        this.tweens.add({ targets: btn, scaleX: 0.96, scaleY: 0.96, duration: 65, yoyo: true, ease: 'Power2' });
 
         // White flash then back to tint
         btn.setTint(0xffffff);
