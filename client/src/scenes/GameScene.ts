@@ -27,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private playerData: Record<string, PlayerData> = {};
 
   private localPlayerId: string | null = null;
+  private readonly localIdentityId = getClientIdentity().id;
   private localNameText!: Phaser.GameObjects.Text;
   private localHpBar!: Phaser.GameObjects.Graphics;
   private colliders: Phaser.GameObjects.Rectangle[] = [];
@@ -44,7 +45,7 @@ export class GameScene extends Phaser.Scene {
   private readonly moveSpeed = 280;
   private readonly acceleration = 1600;
   private readonly drag = 1800;
-  private readonly jumpForce = -500;
+  private readonly jumpForce = -560;
   private readonly maxFallSpeed = 850;
   private readonly coyoteTime = 100;
   private readonly jumpBufferTime = 100;
@@ -132,11 +133,13 @@ export class GameScene extends Phaser.Scene {
     this.colliders.push(ground);
 
     const platforms = [
-      { x: 500, y: 760, w: 220 },
-      { x: 760, y: 640, w: 180 },
-      { x: 1120, y: 700, w: 240 },
-      { x: 1380, y: 560, w: 180 },
-      { x: 1660, y: 680, w: 220 },
+      { x: 440, y: 740, w: 210 },
+      { x: 700, y: 650, w: 200 },
+      { x: 980, y: 580, w: 220 },
+      { x: 1220, y: 580, w: 220 },
+      { x: 1500, y: 650, w: 200 },
+      { x: 1760, y: 740, w: 210 },
+      { x: 1100, y: 500, w: 170 },
     ];
 
     platforms.forEach(({ x, y, w }) => {
@@ -178,7 +181,10 @@ export class GameScene extends Phaser.Scene {
     socket.off('duplicateConnection');
     socket.off('playerLeft');
 
-    socket.on('localPlayer', (data: { id: string }) => { this.localPlayerId = data.id; });
+    socket.on('localPlayer', (data: { id: string }) => {
+      this.localPlayerId = data.id;
+      this.removeRemotePlayer(data.id);
+    });
     socket.on('currentPlayers', (players: Record<string, PlayerData>) => this.upsertPlayers(players));
     socket.on('playerJoined', (player: PlayerData) => this.upsertPlayers({ ...this.playerData, [player.id]: player }));
     socket.on('playersUpdated', (players: Record<string, PlayerData>) => this.upsertPlayers(players));
@@ -205,7 +211,7 @@ export class GameScene extends Phaser.Scene {
   private upsertPlayers(players: Record<string, PlayerData>) {
     this.playerData = players;
     Object.values(players).forEach((player) => {
-      if (player.id === this.localPlayerId) {
+      if (player.id === this.localIdentityId || player.id === this.localPlayerId) {
         this.player.setPosition(player.x, player.y);
         this.currentDirection = player.direction;
       } else {
@@ -220,7 +226,7 @@ export class GameScene extends Phaser.Scene {
   private addOrUpdateRemotePlayer(player: PlayerData) {
     if (!this.otherPlayers[player.id]) {
       const rect = this.add.rectangle(player.x, player.y, 40, 40, Number(player.color.replace('#', '0x')));
-      const name = this.add.text(player.x, player.y - 52, player.name || 'Player', { fontSize: '11px', color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 4, y: 2 } }).setOrigin(0.5).setDepth(40);
+      const name = this.add.text(player.x, player.y - 66, player.name || 'Player', { fontSize: '12px', color: '#dff9ff', backgroundColor: 'rgba(1,9,16,0.75)', padding: { x: 6, y: 2 } }).setOrigin(0.5).setDepth(40);
       const hpBar = this.add.graphics().setDepth(39);
       this.otherPlayers[player.id] = { rect, name, hpBar };
     }
@@ -234,14 +240,14 @@ export class GameScene extends Phaser.Scene {
     const player = this.playerData[id];
     const remote = this.otherPlayers[id];
     if (!player || !remote) return;
-    remote.name.setText(player.name || 'Player').setPosition(remote.rect.x, remote.rect.y - 52);
-    this.drawHpBar(remote.hpBar, remote.rect.x, remote.rect.y - 36, player.hp ?? 100);
+    remote.name.setText(player.name || 'Player').setPosition(remote.rect.x, remote.rect.y - 66);
+    this.drawHpBar(remote.hpBar, remote.rect.x, remote.rect.y - 50, player.hp ?? 100);
   }
 
   private updateLocalPlayerUi() {
-    this.localNameText.setText(getPlayerDisplayName()).setPosition(this.player.x, this.player.y - 52);
+    this.localNameText.setText(getPlayerDisplayName()).setPosition(this.player.x, this.player.y - 66);
     const hp = this.localPlayerId ? this.playerData[this.localPlayerId]?.hp ?? 100 : 100;
-    this.drawHpBar(this.localHpBar, this.player.x, this.player.y - 36, hp);
+    this.drawHpBar(this.localHpBar, this.player.x, this.player.y - 50, hp);
   }
 
   private drawHpBar(graphics: Phaser.GameObjects.Graphics, x: number, y: number, hp: number) {
