@@ -87,6 +87,18 @@ class GameScene extends Phaser.Scene {
   private otherPlayers: Record<string, Phaser.GameObjects.Rectangle> = {};
   private lastSent = 0;
 
+  private wasJumpPressed = false;
+  private lastGroundedTime = 0;
+  private lastJumpPressedTime = 0;
+
+  private readonly moveSpeed = 280;
+  private readonly acceleration = 1600;
+  private readonly drag = 1800;
+  private readonly jumpForce = -500;
+  private readonly maxFallSpeed = 850;
+  private readonly coyoteTime = 100;
+  private readonly jumpBufferTime = 100;
+
   constructor() {
     super("GameScene");
   }
@@ -103,7 +115,10 @@ class GameScene extends Phaser.Scene {
     this.player.setDisplaySize(40, 40);
     this.player.setTint(0x00ff00);
     this.player.setCollideWorldBounds(true);
-    this.player.setBounce(0.2);
+
+    this.player.setBounce(0.05);
+    this.player.setDragX(this.drag);
+    this.player.setMaxVelocity(this.moveSpeed, this.maxFallSpeed);
 
     this.physics.add.collider(this.player, ground);
 
@@ -138,24 +153,47 @@ class GameScene extends Phaser.Scene {
   }
 
   update(time: number) {
-    const speed = 220;
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
 
     const moveLeft = this.cursors.left?.isDown || mobileInput.left;
     const moveRight = this.cursors.right?.isDown || mobileInput.right;
-    const jump = this.cursors.up?.isDown || mobileInput.jump;
+    const jumpPressed = this.cursors.up?.isDown || mobileInput.jump;
 
-    this.player.setVelocityX(0);
+    const isGrounded = body.blocked.down || body.touching.down;
+
+    if (isGrounded) {
+      this.lastGroundedTime = time;
+    }
+
+    if (jumpPressed && !this.wasJumpPressed) {
+      this.lastJumpPressedTime = time;
+    }
+
+    this.wasJumpPressed = jumpPressed;
+
+    this.player.setAccelerationX(0);
 
     if (moveLeft) {
-      this.player.setVelocityX(-speed);
+      this.player.setAccelerationX(-this.acceleration);
     }
 
     if (moveRight) {
-      this.player.setVelocityX(speed);
+      this.player.setAccelerationX(this.acceleration);
     }
 
-    if (jump && this.player.body?.blocked.down) {
-      this.player.setVelocityY(-420);
+    const canUseCoyoteTime = time - this.lastGroundedTime <= this.coyoteTime;
+    const hasBufferedJump =
+      time - this.lastJumpPressedTime <= this.jumpBufferTime;
+
+    if (hasBufferedJump && canUseCoyoteTime) {
+      this.player.setVelocityY(this.jumpForce);
+
+      this.lastJumpPressedTime = 0;
+      this.lastGroundedTime = 0;
+    }
+
+    if (!jumpPressed && body.velocity.y < -120) {
+      this.player.setVelocityY(body.velocity.y * 0.85);
     }
 
     if (time - this.lastSent > 30) {
@@ -196,7 +234,7 @@ const config: Phaser.Types.Core.GameConfig = {
   physics: {
     default: "arcade",
     arcade: {
-      gravity: { y: 900, x: 0 },
+      gravity: { y: 1200, x: 0 },
       debug: false,
     },
   },
