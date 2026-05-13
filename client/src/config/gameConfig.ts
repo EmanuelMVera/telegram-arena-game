@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { BootScene } from "../scenes/BootScene";
 import { LoadingScene } from "../scenes/LoadingScene";
 import { MainMenuScene } from "../scenes/MainMenuScene";
 import { GameScene } from "../scenes/GameScene";
@@ -20,5 +21,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [LoadingScene, MainMenuScene, GameScene],
+  scene: [BootScene, LoadingScene, MainMenuScene, GameScene],
 };
