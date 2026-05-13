@@ -70,7 +70,13 @@ export class LoadingScene extends Phaser.Scene {
       this.updateProgressBar(1);
       this.time.delayedCall(650, () => this.scene.start('MainMenuScene'));
     });
-    this.load.image('loading-bg-warm', '/assets/ui/loading/loading-background.png');
+
+    // Main-menu assets
+    this.load.image('bg-desktop', '/assets/main-menu/background-desktop.png');
+    this.load.image('bg-mobile',  '/assets/main-menu/background-mobile.png');
+    this.load.image('btn-create', '/assets/main-menu/button_create.png');
+    this.load.image('btn-join',   '/assets/main-menu/botton-join.png');
+    this.load.image('avatar-ring','/assets/main-menu/avatar_ring.png');
   }
 
   private drawFrameCorners(w: number, h: number) {

@@ -12,6 +12,7 @@ export class MainMenuScene extends Phaser.Scene {
   private avatarImage!: Phaser.GameObjects.Image;
   private pickerObjects: Phaser.GameObjects.GameObject[] = [];
   private framesRegistered = false;
+
   constructor() { super('MainMenuScene'); }
 
   create() {
@@ -44,65 +45,76 @@ export class MainMenuScene extends Phaser.Scene {
   // ── BACKGROUND ───────────────────────────────────────────────────────────────
 
   private createBackground(w: number, h: number) {
-    this.cameras.main.setBackgroundColor('#050c14');
-    const bg = this.add.image(w / 2, h / 2, 'loading-background')
-      .setScale(Math.max(w / 1600, h / 900)).setDepth(-20);
-    this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.55).setDepth(-10);
+    this.cameras.main.setBackgroundColor('#030810');
+
+    // Choose bg based on aspect ratio — both loaded in LoadingScene
+    const bgKey = w >= h ? 'bg-desktop' : 'bg-mobile';
+    const bg = this.add.image(w / 2, h / 2, bgKey).setDepth(-20);
+    const bgScale = Math.max(w / bg.width, h / bg.height);
+    bg.setScale(bgScale);
+
+    // Light dark tint so UI elements stay readable
+    this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.30).setDepth(-9);
+
     this.drawFrameCorners(w, h);
 
-    // Ambient floating particles (varied colors)
-    const colors = [0x57eaff, 0x8ef8ff, 0x2dd7e6, 0xb0f4ff];
-    for (let i = 0; i < 34; i++) {
-      const r = Phaser.Math.FloatBetween(0.6, 2.8);
-      const a = Phaser.Math.FloatBetween(0.10, 0.55);
+    // Ambient floating particles — match the bioluminescent style of the bg
+    const colors = [0x57eaff, 0x8ef8ff, 0x2dd7e6, 0xb0f4ff, 0x44aaff];
+    for (let i = 0; i < 36; i++) {
+      const r = Phaser.Math.FloatBetween(0.8, 3.2);
+      const a = Phaser.Math.FloatBetween(0.12, 0.60);
       const color = Phaser.Math.RND.pick(colors);
-      const startY = Phaser.Math.Between(Math.floor(h * 0.5), h);
-      const p = this.add.circle(Phaser.Math.Between(0, w), startY, r, color, a).setDepth(-3);
+      const p = this.add.circle(
+        Phaser.Math.Between(0, w),
+        Phaser.Math.Between(Math.floor(h * 0.4), h),
+        r, color, a,
+      ).setDepth(-3).setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({
         targets: p,
-        y: p.y - Phaser.Math.Between(50, 140),
-        x: p.x + Phaser.Math.Between(-22, 22),
+        y: p.y - Phaser.Math.Between(60, 160),
+        x: p.x + Phaser.Math.Between(-28, 28),
         alpha: 0,
-        duration: Phaser.Math.Between(3000, 6500),
-        delay: Phaser.Math.Between(0, 4000),
+        duration: Phaser.Math.Between(3200, 7000),
+        delay: Phaser.Math.Between(0, 4500),
         repeat: -1,
         onRepeat: () => {
-          p.x = Phaser.Math.Between(0, w);
-          p.y = Phaser.Math.Between(Math.floor(h * 0.5), h);
-          p.alpha = a;
+          p.setPosition(Phaser.Math.Between(0, w), Phaser.Math.Between(Math.floor(h * 0.4), h));
+          p.setAlpha(a);
         },
       });
     }
 
-    // Subtle horizontal scan line
-    const scan = this.add.rectangle(w / 2, h * 0.15, w, 1, 0x5ee8ff, 0.025).setDepth(-5);
-    this.tweens.add({ targets: scan, y: h + 10, duration: 8000, repeat: -1, ease: 'Linear', delay: 800 });
+    // Subtle scan-line that drifts downward
+    const scan = this.add.rectangle(w / 2, h * 0.12, w, 1, 0x5ee8ff, 0.022)
+      .setDepth(-5).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: scan, y: h + 10, duration: 9000, repeat: -1, ease: 'Linear', delay: 500 });
 
-    this.tweens.add({ targets: bg, scale: bg.scale * 1.025, duration: 12000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // Slow bg parallax
+    this.tweens.add({ targets: bg, scale: bgScale * 1.025, duration: 14000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   private createVignette(w: number, h: number) {
     const g = this.add.graphics().setDepth(-6);
     for (let i = 10; i >= 1; i--) {
       const t = i / 10;
-      const a = 0.09 * t * t;
+      const a = 0.12 * t * t;
       g.fillStyle(0x000000, a);
-      g.fillRect(0, 0, w * 0.26 * t, h);
-      g.fillRect(w - w * 0.26 * t, 0, w * 0.26 * t, h);
-      g.fillRect(0, 0, w, h * 0.20 * t);
-      g.fillRect(0, h - h * 0.20 * t, w, h * 0.20 * t);
+      g.fillRect(0, 0, w * 0.28 * t, h);
+      g.fillRect(w - w * 0.28 * t, 0, w * 0.28 * t, h);
+      g.fillRect(0, 0, w, h * 0.22 * t);
+      g.fillRect(0, h - h * 0.22 * t, w, h * 0.22 * t);
     }
   }
 
   private drawFrameCorners(w: number, h: number) {
     const g = this.add.graphics().setDepth(-4);
-    g.lineStyle(1, 0x5ee8ff, 0.30);
+    g.lineStyle(1, 0x5ee8ff, 0.32);
     const m = 14, s = 22;
     ([[m, m], [w - m, m], [m, h - m], [w - m, h - m]] as [number, number][]).forEach(([x, y]) => {
       const sx = x === m ? 1 : -1, sy = y === m ? 1 : -1;
       g.lineBetween(x, y, x + sx * s, y);
       g.lineBetween(x, y, x, y + sy * s);
-      g.fillStyle(0x5ee8ff, 0.55);
+      g.fillStyle(0x5ee8ff, 0.6);
       g.fillRect(x - 1, y - 1, 2, 2);
     });
   }
@@ -122,11 +134,11 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.text(cx, h * 0.095, 'ARENA\nBRAWLER 2D', {
       align: 'center', fontSize: `${fs}px`, color: '#c2f8ff',
       fontStyle: 'bold', lineSpacing: Math.round(fs * 0.18),
-    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 20).setDepth(3);
+    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 22).setDepth(3);
 
     const g2 = this.add.graphics().setDepth(2);
     const sepW = Math.min(w * 0.52, 300);
-    g2.lineStyle(1, 0x5ee8ff, 0.40);
+    g2.lineStyle(1, 0x5ee8ff, 0.38);
     g2.lineBetween(cx - sepW / 2, h * 0.19, cx - 8, h * 0.19);
     g2.lineBetween(cx + 8, h * 0.19, cx + sepW / 2, h * 0.19);
     this.drawDiamond(cx, h * 0.19, 4, 0x5ee8ff, 0.80).setDepth(2);
@@ -143,64 +155,54 @@ export class MainMenuScene extends Phaser.Scene {
     const panelH = Math.min(h * 0.43, 320);
     const panelCy = h * 0.435;
 
-    // ── Rounded card panel ───────────────────────────────────────────────────
+    // ── Rounded glass panel ───────────────────────────────────────────────────
     const panelG = this.add.graphics().setDepth(4);
-    panelG.fillStyle(0x020c18, 0.88);
-    panelG.fillRoundedRect(cx - panelW / 2, panelCy - panelH / 2, panelW, panelH, 9);
-    panelG.lineStyle(1, 0x5ee8ff, 0.45);
-    panelG.strokeRoundedRect(cx - panelW / 2, panelCy - panelH / 2, panelW, panelH, 9);
-    // Inner top highlight
-    panelG.lineStyle(1, 0xaaf5ff, 0.10);
+    panelG.fillStyle(0x020c18, 0.82);
+    panelG.fillRoundedRect(cx - panelW / 2, panelCy - panelH / 2, panelW, panelH, 10);
+    panelG.lineStyle(1, 0x5ee8ff, 0.40);
+    panelG.strokeRoundedRect(cx - panelW / 2, panelCy - panelH / 2, panelW, panelH, 10);
+    panelG.lineStyle(1, 0xaaf5ff, 0.09);
     panelG.lineBetween(cx - panelW / 2 + 18, panelCy - panelH / 2 + 2, cx + panelW / 2 - 18, panelCy - panelH / 2 + 2);
 
-    // ── Multi-layer avatar glow (behind everything) ──────────────────────────
-    const glowG = this.add.graphics().setDepth(4);
-    ([{ r: avatarR + 32, a: 0.035 }, { r: avatarR + 21, a: 0.065 }, { r: avatarR + 12, a: 0.11 }]).forEach(({ r, a }) => {
-      glowG.fillStyle(0x5ee8ff, a);
+    // ── Multi-layer avatar glow ───────────────────────────────────────────────
+    const glowG = this.add.graphics().setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+    ([{ r: avatarR + 36, a: 0.06 }, { r: avatarR + 22, a: 0.10 }, { r: avatarR + 13, a: 0.15 }]).forEach(({ r, a }) => {
+      glowG.fillStyle(0x3399ff, a);
       glowG.fillCircle(cx, avatarCy, r);
     });
 
-    // ── Rotating dashed outer ring ───────────────────────────────────────────
-    const dashRingG = this.add.graphics().setDepth(5);
-    const dashes = 10, ringR = avatarR + 20;
-    for (let i = 0; i < dashes; i++) {
-      const sa = (i / dashes) * Math.PI * 2;
-      const ea = sa + (0.52 / dashes) * Math.PI * 2;
-      dashRingG.lineStyle(1.5, 0x5ee8ff, 0.55);
-      dashRingG.beginPath();
-      dashRingG.arc(cx, avatarCy, ringR, sa, ea, false);
-      dashRingG.strokePath();
-    }
-    this.tweens.add({ targets: dashRingG, angle: 360, duration: 9000, repeat: -1, ease: 'Linear' });
+    // Dark bg behind avatar (keeps mask clean)
+    this.add.circle(cx, avatarCy, avatarR + 2, 0x020d1a, 1).setDepth(5);
 
-    // Pulsing solid inner ring
-    const solidRing = this.add.graphics().setDepth(5);
-    solidRing.lineStyle(2.5, 0x5ee8ff, 0.80);
-    solidRing.strokeCircle(cx, avatarCy, avatarR + 7);
-    this.tweens.add({ targets: solidRing, alpha: { from: 0.45, to: 1.0 }, duration: 2100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    // Dark bg fill so the glow doesn't bleed into transparent avatar corners
-    this.add.circle(cx, avatarCy, avatarR + 1, 0x030e1a, 1).setDepth(5);
-
-    // ── Circular mask (add.graphics + setAlpha(0) — fully reliable) ─────────
+    // ── Avatar mask ───────────────────────────────────────────────────────────
     const maskG = this.add.graphics().setAlpha(0).setDepth(0);
     maskG.fillStyle(0xffffff);
     maskG.fillCircle(cx, avatarCy, avatarR);
     const mask = maskG.createGeometryMask();
 
-    // ── Avatar image (3.2× scale so artwork fills the circle) ───────────────
+    // ── Avatar image (3.2× so artwork fills the circle completely) ────────────
     const savedIdx = getSavedAvatarIndex();
     this.avatarImage = this.add.image(cx, avatarCy, 'avatars', String(savedIdx))
       .setDisplaySize(avatarR * 3.2, avatarR * 3.2).setMask(mask).setDepth(6);
 
-    // ── Rim lights drawn above avatar ────────────────────────────────────────
-    const rimG = this.add.graphics().setDepth(7);
-    rimG.lineStyle(2, 0x5ee8ff, 1.0);
-    rimG.strokeCircle(cx, avatarCy, avatarR + 1);
-    rimG.lineStyle(1, 0xd4fbff, 0.30);
-    rimG.strokeCircle(cx, avatarCy, avatarR - 2);
+    // ── Avatar ring image (ornamental ring, center transparent) ───────────────
+    // Sized so its inner opening sits just outside the avatar circle
+    const ringSize = avatarR * 3.2;
+    const ringImg = this.add.image(cx, avatarCy, 'avatar-ring')
+      .setDisplaySize(ringSize, ringSize).setDepth(7);
+    // Breathing pulse on the ring
+    this.tweens.add({
+      targets: ringImg,
+      alpha: { from: 0.82, to: 1.0 },
+      scaleX: ringImg.scaleX * 1.02,
+      scaleY: ringImg.scaleY * 1.02,
+      duration: 2800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
 
-    // ── Orbiting dots ────────────────────────────────────────────────────────
+    // ── Orbiting dots (appear in front of the ring) ───────────────────────────
     const orbitR = avatarR + 20;
     const numDots = 7;
     const orbitState = { angle: 0 };
@@ -208,30 +210,23 @@ export class MainMenuScene extends Phaser.Scene {
       const a = (i / numDots) * Math.PI * 2;
       const big = i % 3 === 0;
       return this.add.arc(
-        cx + Math.cos(a) * orbitR,
-        avatarCy + Math.sin(a) * orbitR,
-        big ? 3.0 : 1.8,
-        0, 360, false,
-        big ? 0x8ef8ff : 0x5ee8ff,
-        big ? 0.9 : 0.5,
-      ).setDepth(8);
+        cx + Math.cos(a) * orbitR, avatarCy + Math.sin(a) * orbitR,
+        big ? 3.0 : 1.8, 0, 360, false,
+        big ? 0x8ef8ff : 0x5ee8ff, big ? 0.9 : 0.55,
+      ).setDepth(8).setBlendMode(Phaser.BlendModes.ADD);
     });
     this.tweens.add({
-      targets: orbitState,
-      angle: Math.PI * 2,
-      duration: 5800,
-      repeat: -1,
-      ease: 'Linear',
+      targets: orbitState, angle: Math.PI * 2, duration: 5800, repeat: -1, ease: 'Linear',
       onUpdate: () => {
         orbitDots.forEach((dot, i) => {
           const a = orbitState.angle + (i / numDots) * Math.PI * 2;
           dot.setPosition(cx + Math.cos(a) * orbitR, avatarCy + Math.sin(a) * orbitR);
-          dot.setAlpha(0.25 + 0.72 * ((1 + Math.sin(a * 2 + i)) / 2));
+          dot.setAlpha(0.25 + 0.75 * ((1 + Math.sin(a * 2 + i)) / 2));
         });
       },
     });
 
-    // ── Telegram photo (loads on top of local avatar if available) ───────────
+    // ── Telegram photo (loads over local avatar if available) ─────────────────
     if (identity.photoUrl) {
       const photoKey = `tg-avatar-${identity.id}`;
       if (this.textures.exists(photoKey)) {
@@ -247,13 +242,13 @@ export class MainMenuScene extends Phaser.Scene {
       }
     }
 
-    // ── Player name ──────────────────────────────────────────────────────────
+    // ── Player name ───────────────────────────────────────────────────────────
     const nameFs = Math.max(22, Math.round(Math.min(w * 0.062, 38)));
     this.aliasText = this.add.text(cx, h * 0.510, getPlayerDisplayName(), {
       fontSize: `${nameFs}px`, color: '#e8feff', fontStyle: 'bold',
-    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 10).setDepth(6);
+    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 12).setDepth(6);
 
-    // Separator + diamond under name
+    // Separator
     const sepW2 = Math.min(w * 0.32, 140);
     const sepY = h * 0.549;
     const sepG = this.add.graphics().setDepth(5);
@@ -261,16 +256,15 @@ export class MainMenuScene extends Phaser.Scene {
     sepG.lineBetween(cx - sepW2 / 2, sepY, cx + sepW2 / 2, sepY);
     this.drawDiamond(cx, sepY, 3, 0x5ee8ff, 0.55).setDepth(5);
 
-    // ── Action buttons (rounded via Graphics + transparent hit Rectangle) ────
+    // ── Action buttons (Alias / Avatar) ───────────────────────────────────────
     const btnY = h * 0.577;
     const halfGap = Math.min(panelW * 0.22, 100);
     const aBtnW = Math.min(panelW * 0.38, 148);
     const aBtnH = 32;
 
-    const actionDefs = [
+    [
       {
-        x: cx - halfGap,
-        label: '✎  Alias',
+        x: cx - halfGap, label: '✎  Alias',
         action: () => {
           const next = window.prompt('Alias de juego', getPlayerDisplayName());
           if (next === null) return;
@@ -278,14 +272,8 @@ export class MainMenuScene extends Phaser.Scene {
           this.aliasText.setText(getPlayerDisplayName());
         },
       },
-      {
-        x: cx + halfGap,
-        label: '◈  Avatar',
-        action: () => this.openAvatarPicker(avatarR),
-      },
-    ];
-
-    actionDefs.forEach(({ x, label, action }) => {
+      { x: cx + halfGap, label: '◈  Avatar', action: () => this.openAvatarPicker(avatarR) },
+    ].forEach(({ x, label, action }) => {
       const abG = this.add.graphics().setDepth(6);
       const drawABtn = (hover: boolean) => {
         abG.clear();
@@ -293,10 +281,6 @@ export class MainMenuScene extends Phaser.Scene {
         abG.fillRoundedRect(x - aBtnW / 2, btnY - aBtnH / 2, aBtnW, aBtnH, 7);
         abG.lineStyle(1, 0x5ee8ff, hover ? 0.80 : 0.38);
         abG.strokeRoundedRect(x - aBtnW / 2, btnY - aBtnH / 2, aBtnW, aBtnH, 7);
-        if (hover) {
-          abG.lineStyle(1, 0xaaf5ff, 0.14);
-          abG.lineBetween(x - aBtnW / 2 + 10, btnY - aBtnH / 2 + 1.5, x + aBtnW / 2 - 10, btnY - aBtnH / 2 + 1.5);
-        }
       };
       drawABtn(false);
       const abTxt = this.add.text(x, btnY, label, {
@@ -317,14 +301,13 @@ export class MainMenuScene extends Phaser.Scene {
     const cx = w / 2;
     const currentIdx = getSavedAvatarIndex();
 
-    // Backdrop
-    const overlay = this.add.rectangle(cx, h / 2, w, h, 0x000000, 0.82)
+    const overlay = this.add.rectangle(cx, h / 2, w, h, 0x000000, 0.84)
       .setDepth(25).setInteractive();
     overlay.on('pointerdown', () => this.closeAvatarPicker());
 
-    // Rounded panel
     const panelW = Math.min(w * 0.90, 400);
     const panelH = Math.min(h * 0.66, 510);
+
     const panelG = this.add.graphics().setDepth(26);
     panelG.fillStyle(0x030e1a, 0.97);
     panelG.fillRoundedRect(cx - panelW / 2, h / 2 - panelH / 2, panelW, panelH, 10);
@@ -337,7 +320,6 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '13px', color: '#5ee8ff', fontStyle: 'bold',
     }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 8).setDepth(27);
 
-    // 3×3 grid
     const cellSize = Math.min((panelW - 44) / 3, (panelH - 120) / 3);
     const thumbR = Math.floor(cellSize * 0.44);
     const gridStartX = cx - cellSize;
@@ -348,48 +330,44 @@ export class MainMenuScene extends Phaser.Scene {
       const tx = gridStartX + col * cellSize;
       const ty = gridStartY + row * cellSize;
 
-      // Selected border fill
       const borderG = this.add.graphics().setDepth(27);
       const drawBorder = (selected: boolean, hover: boolean) => {
         borderG.clear();
-        if (selected)     { borderG.fillStyle(0x5ee8ff, 1.0);   borderG.fillCircle(tx, ty, thumbR + 4); }
-        else if (hover)   { borderG.fillStyle(0x3a7a9a, 0.75);  borderG.fillCircle(tx, ty, thumbR + 4); }
-        else              { borderG.fillStyle(0x18384e, 0.65);   borderG.fillCircle(tx, ty, thumbR + 4); }
+        if (selected)   { borderG.fillStyle(0x5ee8ff, 1.0); borderG.fillCircle(tx, ty, thumbR + 4); }
+        else if (hover) { borderG.fillStyle(0x3a7a9a, 0.75); borderG.fillCircle(tx, ty, thumbR + 4); }
+        else            { borderG.fillStyle(0x18384e, 0.65); borderG.fillCircle(tx, ty, thumbR + 4); }
       };
       drawBorder(i === currentIdx, false);
 
-      // Dark bg inside border
       const bgCirc = this.add.circle(tx, ty, thumbR + 1, 0x030e1a, 1).setDepth(27);
 
-      // Mask
       const mG = this.add.graphics().setAlpha(0).setDepth(0);
       mG.fillStyle(0xffffff);
       mG.fillCircle(tx, ty, thumbR);
       const tMask = mG.createGeometryMask();
 
-      // Thumbnail
       const thumb = this.add.image(tx, ty, 'avatars', String(i))
         .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setMask(tMask).setDepth(28)
         .setInteractive({ useHandCursor: true });
 
-      // Rim above thumb
-      const rimG = this.add.graphics().setDepth(29);
-      rimG.lineStyle(1.5, i === currentIdx ? 0x5ee8ff : 0x2a5a70, i === currentIdx ? 0.95 : 0.4);
-      rimG.strokeCircle(tx, ty, thumbR + 1);
+      // Mini ring on each picker thumbnail
+      if (this.textures.exists('avatar-ring')) {
+        const miniRing = this.add.image(tx, ty, 'avatar-ring')
+          .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setDepth(29).setAlpha(0.75);
+        this.pickerObjects.push(miniRing);
+      }
 
       thumb.on('pointerdown', () => {
         saveAvatarIndex(i);
-        this.avatarImage.setTexture('avatars', String(i))
-          .setDisplaySize(avatarR * 3.2, avatarR * 3.2);
+        this.avatarImage.setTexture('avatars', String(i)).setDisplaySize(avatarR * 3.2, avatarR * 3.2);
         this.closeAvatarPicker();
       });
       thumb.on('pointerover', () => { if (i !== getSavedAvatarIndex()) drawBorder(false, true); });
       thumb.on('pointerout',  () => { if (i !== getSavedAvatarIndex()) drawBorder(false, false); });
 
-      this.pickerObjects.push(borderG, bgCirc, mG, thumb, rimG);
+      this.pickerObjects.push(borderG, bgCirc, mG, thumb);
     }
 
-    // Close button (rounded)
     const closeBtnY = h / 2 + panelH / 2 - 34;
     const closeG = this.add.graphics().setDepth(27);
     const drawClose = (hover: boolean) => {
@@ -416,77 +394,158 @@ export class MainMenuScene extends Phaser.Scene {
     this.pickerObjects = [];
   }
 
-  // ── MAIN BUTTONS ──────────────────────────────────────────────────────────────
+  // ── MAIN BUTTONS (image-based with glow fx) ───────────────────────────────────
 
   private createButtons(w: number, h: number) {
     const cx = w / 2;
-    const btnW = Math.min(w * 0.82, 440);
-    const btnH = Math.max(50, Math.round(h * 0.088));
-    const startY = h * 0.650;
-    const spacing = Math.min(76, Math.round((h * 0.94 - startY) / 2.5));
-    const r = 7;
+    const maxBtnW = Math.min(w * 0.88, 520);
+    const startY = h * 0.655;
+    const spacing = Math.min(80, Math.round((h * 0.945 - startY) / 2.5));
 
-    const defs: { label: string; icon: 'swords' | 'join'; highlight: boolean; mode: 'create' | 'join' }[] = [
-      { label: 'CREAR PARTIDA',    icon: 'swords', highlight: false, mode: 'create' },
-      { label: 'UNIRSE A PARTIDA', icon: 'join',   highlight: true,  mode: 'join'   },
+    const defs: { key: string; mode: 'create' | 'join' }[] = [
+      { key: 'btn-create', mode: 'create' },
+      { key: 'btn-join',   mode: 'join'   },
     ];
 
-    defs.forEach(({ label, icon, highlight, mode }, idx) => {
+    defs.forEach(({ key, mode }, idx) => {
       const by = startY + idx * spacing;
-      const fill0 = highlight ? 0x0d4d62 : 0x060f1a;
-      const fill1 = highlight ? 0x145f78 : 0x0a1d2c;
-      const bA0 = highlight ? 1.0 : 0.75;
-      const bPx = highlight ? 2 : 1.5;
 
-      const bg = this.add.graphics().setDepth(8);
-      const drawBg = (hover: boolean) => {
-        bg.clear();
-        bg.fillStyle(hover ? fill1 : fill0, 0.97);
-        bg.fillRoundedRect(cx - btnW / 2, by - btnH / 2, btnW, btnH, r);
-        bg.lineStyle(bPx, 0x5ee8ff, hover ? 1.0 : bA0);
-        bg.strokeRoundedRect(cx - btnW / 2, by - btnH / 2, btnW, btnH, r);
-        // Top inner shimmer
-        bg.lineStyle(1, 0xaaf5ff, hover ? 0.16 : (highlight ? 0.08 : 0));
-        if (hover || highlight) {
-          bg.lineBetween(cx - btnW / 2 + r + 4, by - btnH / 2 + 2, cx + btnW / 2 - r - 4, by - btnH / 2 + 2);
-        }
-      };
-      drawBg(false);
+      // Button image — scale to fit maxBtnW, keep aspect ratio
+      const btn = this.add.image(cx, by, key)
+        .setDepth(8)
+        .setInteractive({ useHandCursor: true });
+      const scale = Math.min(maxBtnW / btn.width, 90 / btn.height);
+      btn.setScale(scale);
+      const dW = btn.displayWidth;
+      const dH = btn.displayHeight;
 
-      // Bracket decorations
-      const bG = this.add.graphics().setDepth(9);
-      bG.lineStyle(1, 0x5ee8ff, highlight ? 0.70 : 0.40);
-      const brkH = btnH * 0.42;
-      const bL = cx - btnW / 2 + 18, bR = cx + btnW / 2 - 18;
-      [[bL, 8], [bR, -8]].forEach(([bx, dx]) => {
-        bG.lineBetween(bx, by - brkH / 2, bx, by + brkH / 2);
-        bG.lineBetween(bx, by - brkH / 2, bx + dx, by - brkH / 2);
-        bG.lineBetween(bx, by + brkH / 2, bx + dx, by + brkH / 2);
+      // ── Static drop-shadow ────────────────────────────────────────────────
+      const shadow = this.add.graphics().setDepth(6).setAlpha(0.55);
+      shadow.fillStyle(0x000000, 0.70);
+      shadow.fillRoundedRect(cx - dW / 2 + 6, by - dH / 2 + 6, dW, dH, 5);
+
+      // ── Atmospheric glow behind button (ADD blend) ────────────────────────
+      const atmoGlow = this.add.graphics()
+        .setDepth(7)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setAlpha(0);
+      atmoGlow.fillStyle(0x1155cc, 0.55);
+      atmoGlow.fillRoundedRect(cx - dW / 2 - 18, by - dH * 0.9, dW + 36, dH * 1.8, 14);
+
+      // ── Rim light around button edges (ADD blend) ─────────────────────────
+      const rimGlow = this.add.graphics()
+        .setDepth(9)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setAlpha(0);
+      rimGlow.lineStyle(4, 0x66aaff, 0.8);
+      rimGlow.strokeRoundedRect(cx - dW / 2, by - dH / 2, dW, dH, 4);
+      rimGlow.lineStyle(10, 0x3366cc, 0.25);
+      rimGlow.strokeRoundedRect(cx - dW / 2 - 2, by - dH / 2 - 2, dW + 4, dH + 4, 6);
+
+      // ── Shimmer strip (sweeps left→right on hover) ─────────────────────────
+      const shimmer = this.add.rectangle(cx - dW / 2 - 10, by, 16, dH * 0.75, 0x99ddff, 0)
+        .setDepth(10)
+        .setBlendMode(Phaser.BlendModes.ADD);
+
+      // ── Idle pulse (always on, very subtle) ───────────────────────────────
+      const idleGlow = this.add.graphics()
+        .setDepth(7)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setAlpha(0.18);
+      idleGlow.fillStyle(0x0044aa, 0.45);
+      idleGlow.fillRoundedRect(cx - dW / 2 - 6, by - dH / 2 - 3, dW + 12, dH + 6, 8);
+      this.tweens.add({
+        targets: idleGlow,
+        alpha: { from: 0.10, to: 0.28 },
+        duration: 1800 + idx * 400,
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       });
 
-      this.drawButtonIcon(icon, cx - btnW / 2 + 44, by, 7, highlight).setDepth(9);
+      // ── Pointer events ────────────────────────────────────────────────────
 
-      const fs = Math.max(16, Math.round(Math.min(w * 0.037, 22)));
-      const txt = this.add.text(cx + 12, by, label, {
-        fontSize: `${fs}px`, color: highlight ? '#d4fbff' : '#bef0ff', fontStyle: 'bold',
-      }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', highlight ? 7 : 0).setDepth(9);
+      btn.on('pointerover', () => {
+        this.tweens.killTweensOf([btn, atmoGlow, rimGlow, shimmer]);
 
-      const hit = this.add.rectangle(cx, by, btnW, btnH).setDepth(10).setInteractive({ useHandCursor: true });
-      hit.on('pointerover', () => { drawBg(true); txt.setColor('#ffffff'); });
-      hit.on('pointerout',  () => { drawBg(false); txt.setColor(highlight ? '#d4fbff' : '#bef0ff'); });
-      hit.on('pointerdown', () => {
-        this.tweens.add({ targets: bg, alpha: 0.6, yoyo: true, duration: 80 });
-        this.cameras.main.fadeOut(300, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('CreateJoinScene', { mode }));
+        // Scale up
+        this.tweens.add({ targets: btn, scaleX: scale * 1.03, scaleY: scale * 1.03, duration: 130, ease: 'Back.easeOut' });
+        // Atmospheric glow fade in
+        this.tweens.add({ targets: atmoGlow, alpha: 1, duration: 150 });
+        // Rim fade in
+        this.tweens.add({ targets: rimGlow, alpha: 1, duration: 150 });
+        // Cyan tint
+        btn.setTint(0xbbddff);
+
+        // Shimmer sweep
+        shimmer.setAlpha(0.65).setX(cx - dW / 2 - 10);
+        this.tweens.add({ targets: shimmer, x: cx + dW / 2 + 14, alpha: 0, duration: 380, ease: 'Power2.easeIn' });
+      });
+
+      btn.on('pointerout', () => {
+        this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
+        this.tweens.add({ targets: btn, scaleX: scale, scaleY: scale, duration: 160, ease: 'Power2' });
+        this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 0, duration: 220 });
+        btn.clearTint();
+      });
+
+      btn.on('pointerdown', () => {
+        // Slight press-down scale
+        this.tweens.killTweensOf(btn);
+        this.tweens.add({ targets: btn, scaleX: scale * 0.96, scaleY: scale * 0.96, duration: 65, yoyo: true, ease: 'Power2' });
+
+        // White flash then back to tint
+        btn.setTint(0xffffff);
+        this.time.delayedCall(80, () => btn.setTint(0xbbddff));
+
+        // Rim surge
+        this.tweens.add({ targets: rimGlow, alpha: 2.0, duration: 60, yoyo: true });
+
+        // Particle burst from edges
+        this.emitButtonSpark(cx, by, dW, dH);
+
+        // Transition
+        this.time.delayedCall(80, () => {
+          this.cameras.main.fadeOut(280, 0, 0, 0);
+          this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('CreateJoinScene', { mode }));
+        });
       });
     });
+  }
+
+  /** Burst of small cyan sparks from button edges on click */
+  private emitButtonSpark(cx: number, cy: number, bw: number, bh: number) {
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const side = Phaser.Math.Between(0, 3);
+      let px = cx, py = cy;
+      if (side === 0) { px = cx + Phaser.Math.Between(-bw / 2, bw / 2); py = cy - bh / 2; }
+      else if (side === 1) { px = cx + Phaser.Math.Between(-bw / 2, bw / 2); py = cy + bh / 2; }
+      else if (side === 2) { px = cx - bw / 2; py = cy + Phaser.Math.Between(-bh / 2, bh / 2); }
+      else { px = cx + bw / 2; py = cy + Phaser.Math.Between(-bh / 2, bh / 2); }
+
+      const r = Phaser.Math.FloatBetween(2.5, 5.5);
+      const color = Phaser.Math.RND.pick([0x88ccff, 0xaaddff, 0x5599ee, 0xffffff]);
+      const spark = this.add.arc(px, py, r, 0, 360, false, color, 1)
+        .setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const speed = Phaser.Math.FloatBetween(50, 140);
+      this.tweens.add({
+        targets: spark,
+        x: px + Math.cos(angle) * speed,
+        y: py + Math.sin(angle) * speed - Phaser.Math.FloatBetween(0, 40),
+        alpha: 0,
+        scaleX: 0, scaleY: 0,
+        duration: Phaser.Math.Between(320, 650),
+        ease: 'Power2.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
   }
 
   // ── BOTTOM BAR ────────────────────────────────────────────────────────────────
 
   private createBottomBar(w: number, h: number) {
     const g = this.add.graphics().setDepth(10);
-    g.lineStyle(1, 0x5ee8ff, 0.15);
+    g.lineStyle(1, 0x5ee8ff, 0.14);
     g.lineBetween(w * 0.05, h - 42, w * 0.95, h - 42);
     this.add.text(w * 0.06, h - 24, 'ÚNETE A LA COMUNIDAD', {
       fontSize: '11px', color: '#4ac6d8',
@@ -503,27 +562,6 @@ export class MainMenuScene extends Phaser.Scene {
     g.fillStyle(color, alpha);
     g.fillTriangle(x, y - size, x + size * 0.65, y, x - size * 0.65, y);
     g.fillTriangle(x, y + size, x + size * 0.65, y, x - size * 0.65, y);
-    return g;
-  }
-
-  private drawButtonIcon(type: 'swords' | 'join' | 'arena', x: number, y: number, s: number, bright: boolean) {
-    const g = this.add.graphics();
-    const c = bright ? 0x8ef8ff : 0x5ee8ff;
-    const a = bright ? 0.95 : 0.8;
-    g.lineStyle(1.5, c, a);
-    if (type === 'swords') {
-      g.lineBetween(x - s, y - s, x + s, y + s); g.lineBetween(x + s, y - s, x - s, y + s);
-      g.fillStyle(c, a); g.fillCircle(x - s * 0.9, y - s * 0.9, 2.5); g.fillCircle(x + s * 0.9, y + s * 0.9, 2.5);
-    } else if (type === 'join') {
-      g.fillStyle(c, a); g.fillCircle(x - s, y, s * 0.48); g.fillCircle(x + s, y, s * 0.48);
-      g.lineBetween(x - s * 0.52, y, x + s * 0.52, y);
-    } else {
-      g.fillStyle(c, a * 0.3);
-      g.fillTriangle(x, y - s, x + s, y, x - s, y); g.fillTriangle(x, y + s, x + s, y, x - s, y);
-      g.lineStyle(1.5, c, a);
-      g.lineBetween(x, y - s, x + s, y); g.lineBetween(x + s, y, x, y + s);
-      g.lineBetween(x, y + s, x - s, y); g.lineBetween(x - s, y, x, y - s);
-    }
     return g;
   }
 }
