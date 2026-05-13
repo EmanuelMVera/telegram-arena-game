@@ -5,6 +5,7 @@ import {
   getClientIdentity,
   disableGameplayLayout,
   enableGameplayLayout,
+  getPlayerDisplayName,
 } from '../telegram/telegram';
 import type { Direction, PlayerData } from '../types/player';
 import { createHud, updateHud } from '../ui/hud';
@@ -17,6 +18,7 @@ export class GameScene extends Phaser.Scene {
 
   private otherPlayers: Record<string, Phaser.GameObjects.Rectangle> = {};
   private otherPlayerLabels: Record<string, Phaser.GameObjects.Text> = {};
+  private localPlayerLabel!: Phaser.GameObjects.Text;
 
   private playerData: Record<string, PlayerData> = {};
   private hudText!: Phaser.GameObjects.Text;
@@ -47,6 +49,9 @@ export class GameScene extends Phaser.Scene {
 
   preload() {}
 
+  private readonly worldWidth = 2000;
+  private readonly worldHeight = 900;
+
   create() {
     enableGameplayLayout();
 
@@ -56,12 +61,19 @@ export class GameScene extends Phaser.Scene {
 
     this.createPlayerTexture();
 
-    this.physics.world.setBounds(0, 0, 900, 500);
+    this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
-    const ground = this.add.rectangle(450, 460, 900, 4, 0xffffff);
+    const ground = this.add.rectangle(
+      this.worldWidth / 2,
+      this.worldHeight - 30,
+      this.worldWidth,
+      20,
+      0x1f3546,
+    );
     this.physics.add.existing(ground, true);
 
-    this.player = this.physics.add.sprite(100, 300, 'player-square');
+    this.player = this.physics.add.sprite(240, 520, 'player-square');
     this.player.setDisplaySize(40, 40);
     this.player.setTint(0x00ff00);
     this.player.setCollideWorldBounds(true);
@@ -70,6 +82,32 @@ export class GameScene extends Phaser.Scene {
     this.player.setMaxVelocity(this.moveSpeed, this.maxFallSpeed);
 
     this.physics.add.collider(this.player, ground);
+
+    const platformData = [
+      { x: 440, y: 690, w: 280 },
+      { x: 860, y: 560, w: 240 },
+      { x: 1250, y: 640, w: 320 },
+      { x: 1580, y: 500, w: 220 },
+    ];
+
+    platformData.forEach(({ x, y, w }) => {
+      const platform = this.add.rectangle(x, y, w, 16, 0x345a73);
+      platform.setStrokeStyle(2, 0x5ee8ff, 0.5);
+      this.physics.add.existing(platform, true);
+      this.physics.add.collider(this.player, platform);
+    });
+
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+
+    this.localPlayerLabel = this.add
+      .text(this.player.x, this.player.y - 44, getPlayerDisplayName(), {
+        fontSize: '13px',
+        color: '#ffffff',
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        padding: { x: 5, y: 2 },
+      })
+      .setOrigin(0.5);
+
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
@@ -85,7 +123,7 @@ export class GameScene extends Phaser.Scene {
 
     this.registerSocketEvents();
 
-    socket.emit('joinGame', getClientIdentity());
+    socket.emit('joinGame', { ...getClientIdentity(), name: getPlayerDisplayName() });
   }
 
   update(time: number) {
@@ -152,6 +190,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.wasAttackPressed = attackPressed;
+
+    this.localPlayerLabel.setPosition(this.player.x, this.player.y - 44);
 
     if (time - this.lastSent > 30) {
       socket.emit('playerMove', {
@@ -291,7 +331,7 @@ export class GameScene extends Phaser.Scene {
       Number(player.color.replace('#', '0x')),
     );
 
-    const label = this.add.text(player.x - 34, player.y - 44, '', {
+    const label = this.add.text(player.x, player.y - 44, '', {
       fontSize: '11px',
       color: '#ffffff',
       backgroundColor: 'rgba(0, 0, 0, 0.45)',
@@ -314,12 +354,9 @@ export class GameScene extends Phaser.Scene {
 
     if (!player || !rect || !label) return;
 
-    label.setPosition(rect.x - 34, rect.y - 44);
-    label.setText(
-      `${player.name} | HP ${player.hp ?? 100} | K ${player.kills ?? 0} D ${
-        player.deaths ?? 0
-      }`,
-    );
+    label.setPosition(rect.x, rect.y - 44);
+    label.setOrigin(0.5);
+    label.setText(player.name || 'Player');
   }
 
   private removeDisconnectedRemotePlayers(players: Record<string, PlayerData>) {
