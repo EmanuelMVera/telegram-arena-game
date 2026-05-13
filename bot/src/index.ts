@@ -1,4 +1,5 @@
 import { Telegraf, Markup } from "telegraf";
+import express from "express";
 import "dotenv/config";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -31,3 +32,30 @@ bot.command("jugar", (ctx) => {
 bot.launch();
 
 console.log("Bot iniciado");
+
+const app = express();
+
+app.get("/", (_req, res) => {
+  res.send("Arena Brawler bot running");
+});
+
+app.get("/health", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "arena-brawler-bot",
+  });
+});
+
+const PORT = Number(process.env.PORT) || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Health server listening on port ${PORT}`);
+});
+
+process.once("SIGINT", () => {
+  bot.stop("SIGINT");
+});
+
+process.once("SIGTERM", () => {
+  bot.stop("SIGTERM");
+});
