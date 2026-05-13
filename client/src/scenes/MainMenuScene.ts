@@ -127,7 +127,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Local avatar from spritesheet (default)
     const savedIdx = getSavedAvatarIndex();
     this.avatarImage = this.add.image(cx, avatarCy, 'avatars', String(savedIdx))
-      .setDisplaySize(avatarR * 2, avatarR * 2).setMask(mask).setDepth(6);
+      .setDisplaySize(avatarR * 2.5, avatarR * 2.5).setMask(mask).setDepth(6);
     this.add.circle(cx, avatarCy, avatarR + 2).setStrokeStyle(2, 0x8eefff, 0.8).setDepth(7);
 
     // Try Telegram photo on top (if available)
@@ -135,12 +135,12 @@ export class MainMenuScene extends Phaser.Scene {
       const photoKey = `tg-avatar-${identity.id}`;
       if (this.textures.exists(photoKey)) {
         this.avatarImage.setTexture(photoKey).setFrame(0);
-        this.avatarImage.setDisplaySize(avatarR * 2, avatarR * 2);
+        this.avatarImage.setDisplaySize(avatarR * 2.5, avatarR * 2.5);
       } else {
         this.load.image(photoKey, identity.photoUrl);
         this.load.once(Phaser.Loader.Events.COMPLETE, () => {
           if (this.textures.exists(photoKey) && this.avatarImage?.active) {
-            this.avatarImage.setTexture(photoKey).setDisplaySize(avatarR * 2, avatarR * 2);
+            this.avatarImage.setTexture(photoKey).setDisplaySize(avatarR * 2.5, avatarR * 2.5);
           }
         });
         this.load.start();
@@ -226,12 +226,12 @@ export class MainMenuScene extends Phaser.Scene {
       const thumbMask = maskArc.createGeometryMask();
 
       const thumb = this.add.image(tx, ty, 'avatars', String(i))
-        .setDisplaySize(thumbR * 2, thumbR * 2).setMask(thumbMask).setDepth(28)
+        .setDisplaySize(thumbR * 2.5, thumbR * 2.5).setMask(thumbMask).setDepth(28)
         .setInteractive({ useHandCursor: true });
 
       thumb.on('pointerdown', () => {
         saveAvatarIndex(i);
-        this.avatarImage.setTexture('avatars', String(i));
+        this.avatarImage.setTexture('avatars', String(i)).setDisplaySize(avatarR * 2.5, avatarR * 2.5);
         this.closeAvatarPicker();
       });
       thumb.on('pointerover', () => { if (i !== getSavedAvatarIndex()) border.setFillStyle(0x3a6a8a, 0.7); });

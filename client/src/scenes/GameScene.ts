@@ -463,10 +463,10 @@ export class GameScene extends Phaser.Scene {
     arc.beginPath();
     const startAngle = direction === 'right' ? -0.6 : Math.PI + 0.6;
     const endAngle   = direction === 'right' ?  0.6 : Math.PI - 0.6;
-    arc.arc(x + ox, y, 26, startAngle, endAngle, direction === 'right');
+    arc.arc(x + ox, y, 26, startAngle, endAngle, direction !== 'right');
     arc.strokePath();
     arc.lineStyle(1, 0xeeffff, 0.5);
-    arc.arc(x + ox, y, 32, startAngle, endAngle, direction === 'right');
+    arc.arc(x + ox, y, 32, startAngle, endAngle, direction !== 'right');
     arc.strokePath();
     this.tweens.add({ targets: arc, alpha: 0, scaleX: 1.15, scaleY: 1.15, duration: 130, onComplete: () => arc.destroy() });
   }
