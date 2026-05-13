@@ -18,6 +18,7 @@ export function getPlayerBySocketId(socketId: string) {
 export function createOrReplacePlayer(
   identity: ClientIdentity,
   socketId: string,
+  roomId?: string,
 ) {
   const existingPlayer = players[identity.id];
 
@@ -27,6 +28,7 @@ export function createOrReplacePlayer(
     existingPlayer.socketId = socketId;
     existingPlayer.name = identity.name;
     existingPlayer.photoUrl = identity.photoUrl;
+    if (roomId) existingPlayer.roomId = roomId;
 
     return {
       player: existingPlayer,
@@ -52,6 +54,7 @@ export function createOrReplacePlayer(
     deaths: 0,
     direction: "right",
     lastAttackAt: 0,
+    roomId,
   };
 
   players[player.id] = player;
@@ -61,6 +64,11 @@ export function createOrReplacePlayer(
     previousSocketId: null,
     isReplacement: false,
   };
+}
+
+export function getRoomPlayers(roomId?: string): Record<string, Player> {
+  if (!roomId) return { ...players };
+  return Object.fromEntries(Object.entries(players).filter(([, p]) => p.roomId === roomId));
 }
 
 export function updatePlayerPosition(

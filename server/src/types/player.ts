@@ -21,4 +21,5 @@ export type Player = {
   deaths: number;
   direction: Direction;
   lastAttackAt: number;
+  roomId?: string;
 };

@@ -29,7 +29,11 @@ export function processAttack(attacker: Player): AttackResult {
   const hitTargets: Player[] = [];
   const killedTargets: Player[] = [];
 
-  Object.values(getPlayers()).forEach((target) => {
+  const pool = attacker.roomId
+    ? Object.values(getPlayers()).filter((p) => p.roomId === attacker.roomId)
+    : Object.values(getPlayers());
+
+  pool.forEach((target) => {
     if (target.id === attacker.id) return;
     if (target.hp <= 0) return;
 
