@@ -27,7 +27,7 @@ export class CreateJoinScene extends Phaser.Scene {
 
   private createBackground(w: number, h: number) {
     this.cameras.main.setBackgroundColor('#050c14');
-    const bg = this.add.image(w / 2, h / 2, 'loading-background')
+    const bg = this.add.image(w / 2, h / 2, 'BG-Desktop.png')
       .setScale(Math.max(w / 1600, h / 900)).setDepth(-20);
     this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.65).setDepth(-10);
     this.tweens.add({ targets: bg, scale: bg.scale * 1.02, duration: 10000, yoyo: true, repeat: -1 });
