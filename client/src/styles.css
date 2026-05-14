@@ -24,7 +24,7 @@ canvas {
   display: block;
 }
 
-/* Controles táctiles mobile */
+/* ── Mobile game controls (only during gameplay) ── */
 
 #mobile-controls {
   position: fixed;
@@ -66,45 +66,61 @@ canvas {
   user-select: none;
 }
 
-/*
-  Los controles mobile SOLO aparecen durante la partida.
-*/
 body.telegram-mobile.gameplay-mode #mobile-controls {
   display: block;
 }
 
-/* Botón de rotación manual — solo visible en mobile fuera del juego */
+/* ── Rotate device overlay ── */
 
-#btn-orientation {
+#rotate-overlay {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 50;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(2, 10, 20, 0.80);
-  border: 1.5px solid rgba(94, 232, 255, 0.55);
-  color: #5ee8ff;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
+  inset: 0;
+  z-index: 9999;
+  background: #020914;
   display: none;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  touch-action: none;
-  user-select: none;
-  transition: border-color 0.15s, background 0.15s;
+  color: #5ee8ff;
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: center;
+  padding: 20px;
 }
 
-#btn-orientation:active {
-  background: rgba(14, 60, 80, 0.90);
-  border-color: rgba(94, 232, 255, 0.9);
+#rotate-overlay .rotate-icon {
+  font-size: 72px;
+  margin-bottom: 24px;
+  animation: rotate-hint 2.4s ease-in-out infinite;
 }
 
-body.telegram-mobile:not(.gameplay-mode) #btn-orientation {
-  display: flex;
+#rotate-overlay p {
+  font-size: 22px;
+  font-weight: bold;
+  color: #c8f5ff;
+  margin: 0 0 10px;
 }
 
+#rotate-overlay span {
+  font-size: 14px;
+  color: #3a8a9e;
+}
+
+@keyframes rotate-hint {
+  0%,
+  100% {
+    transform: rotate(0deg);
+    opacity: 0.75;
+  }
+  45%,
+  55% {
+    transform: rotate(-90deg);
+    opacity: 1;
+  }
+}
+
+/* Show overlay whenever device is in portrait orientation */
+@media (orientation: portrait) {
+  #rotate-overlay {
+    display: flex;
+  }
+}

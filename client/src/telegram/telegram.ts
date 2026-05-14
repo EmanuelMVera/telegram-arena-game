@@ -89,8 +89,8 @@ export function initializeTelegram() {
 
   if (isTelegramMobile()) {
     document.body.classList.add("telegram-mobile");
-    // Lock to portrait for menu scenes — fullscreen must be active first
-    lockPortrait();
+    // Always lock landscape — menus and gameplay are both horizontal
+    lockLandscape();
   }
 
   return tg;
@@ -146,7 +146,8 @@ export function enableGameplayLayout() {
 
 export function disableGameplayLayout() {
   document.body.classList.remove("gameplay-mode", "portrait-mode");
-  lockPortrait();
+  // Maintain landscape orientation when returning to menus
+  lockLandscape();
 }
 
 export function getClientIdentity(): ClientIdentity {
