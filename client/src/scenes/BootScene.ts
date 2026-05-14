@@ -13,7 +13,7 @@ export class BootScene extends Phaser.Scene {
     const prefix = portrait ? "BG_Mobile_Loading" : "BG_Desktop_Loading";
     this.load.image("loading-bg", `/assets/background/${prefix}_${n}.jpg`);
 
-    this.load.image("logo", "/assets/ui/loading/arena-brawler-logo.png");
+    this.load.image("logo", "/assets/logo/logo.png");
     this.load.image("avatars", "/assets/avatars/avatars.png");
   }
 

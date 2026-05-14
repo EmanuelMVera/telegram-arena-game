@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import {
   getClientIdentity,
   getPlayerDisplayName,
-  getSavedAvatarIndex,
-  saveAvatarIndex,
   savePlayerAlias,
 } from '../telegram/telegram';
 import { socket } from '../network/socket';
@@ -12,10 +10,6 @@ import { buildAvatar } from '../utils/avatar';
 
 export class MainMenuScene extends Phaser.Scene {
   private aliasText!: Phaser.GameObjects.Text;
-  private framesRegistered = false;
-
-  // Avatar picker
-  private pickerObjects: Phaser.GameObjects.GameObject[] = [];
 
   // Join modal
   private joinModalObjects: Phaser.GameObjects.GameObject[] = [];
@@ -25,8 +19,6 @@ export class MainMenuScene extends Phaser.Scene {
   constructor() { super('MainMenuScene'); }
 
   create() {
-    this.framesRegistered = false;
-    this.registerAvatarFrames();
     this.buildLayout();
 
     this.scale.on('resize', this.onResize, this);
@@ -40,31 +32,11 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private onResize(_size: Phaser.Structs.Size) {
-    // Rebuild everything — simplest and most robust approach for menus
     this.children.removeAll(true);
     this.tweens.killAll();
-    this.framesRegistered = false;
     this.aliasText = undefined as unknown as Phaser.GameObjects.Text;
-    this.pickerObjects = [];
     this.cleanupJoinModal();
-    this.registerAvatarFrames();
     this.buildLayout();
-  }
-
-  // ── AVATAR FRAMES ────────────────────────────────────────────────────────────
-
-  private registerAvatarFrames() {
-    if (this.framesRegistered) return;
-    const tex = this.textures.get('avatars');
-    const src = tex.getSourceImage() as HTMLImageElement;
-    const fw = Math.floor(src.width / 3);
-    const fh = Math.floor(src.height / 3);
-    for (let i = 0; i < 9; i++) {
-      if (!tex.has(String(i))) {
-        tex.add(String(i), 0, (i % 3) * fw, Math.floor(i / 3) * fh, fw, fh);
-      }
-    }
-    this.framesRegistered = true;
   }
 
   // ── FULL LAYOUT BUILD ─────────────────────────────────────────────────────────
@@ -318,49 +290,35 @@ export class MainMenuScene extends Phaser.Scene {
     sepG.lineBetween(cx - sepW / 2, sepY, cx + sepW / 2, sepY);
     this.drawDiamond(cx, sepY, 3, 0x5ee8ff, 0.55).setDepth(5);
 
-    // Mini action buttons: Alias | Avatar
+    // Single alias edit button — centred below name
     const abBtnY = sepY + layout.pad * 1.8;
-    const halfGap = Math.min(layout.vmin * 0.20, 90);
-    const aBtnW = Math.min(layout.vmin * 0.35, 130);
+    const aBtnW = Math.min(layout.vmin * 0.38, 148);
     const aBtnH = Math.max(26, Math.round(layout.fs(14) * 2));
     const aBtnFs = Math.round(layout.fs(12));
 
-    [
-      {
-        x: cx - halfGap,
-        label: '✎  Alias',
-        action: () => {
-          const next = window.prompt('Alias de juego', getPlayerDisplayName());
-          if (next === null) return;
-          savePlayerAlias(next);
-          this.aliasText.setText(getPlayerDisplayName());
-        },
-      },
-      {
-        x: cx + halfGap,
-        label: '◈  Avatar',
-        action: () => this.openAvatarPicker(),
-      },
-    ].forEach(({ x, label, action }) => {
-      const abG = this.add.graphics().setDepth(6);
-      const drawABtn = (hover: boolean) => {
-        abG.clear();
-        abG.fillStyle(hover ? 0x143d54 : 0x081824, hover ? 0.97 : 0.88);
-        abG.fillRoundedRect(x - aBtnW / 2, abBtnY - aBtnH / 2, aBtnW, aBtnH, 7);
-        abG.lineStyle(1, 0x5ee8ff, hover ? 0.80 : 0.38);
-        abG.strokeRoundedRect(x - aBtnW / 2, abBtnY - aBtnH / 2, aBtnW, aBtnH, 7);
-      };
-      drawABtn(false);
-      const abTxt = this.add.text(x, abBtnY, label, {
-        fontSize: `${aBtnFs}px`, color: '#8eefff', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(7);
-      const abHit = this.add
-        .rectangle(x, abBtnY, aBtnW, aBtnH)
-        .setDepth(8)
-        .setInteractive({ useHandCursor: true });
-      abHit.on('pointerover', () => { drawABtn(true); abTxt.setColor('#d4fbff'); });
-      abHit.on('pointerout',  () => { drawABtn(false); abTxt.setColor('#8eefff'); });
-      abHit.on('pointerdown', action);
+    const abG = this.add.graphics().setDepth(6);
+    const drawABtn = (hover: boolean) => {
+      abG.clear();
+      abG.fillStyle(hover ? 0x143d54 : 0x081824, hover ? 0.97 : 0.88);
+      abG.fillRoundedRect(cx - aBtnW / 2, abBtnY - aBtnH / 2, aBtnW, aBtnH, 7);
+      abG.lineStyle(1, 0x5ee8ff, hover ? 0.80 : 0.38);
+      abG.strokeRoundedRect(cx - aBtnW / 2, abBtnY - aBtnH / 2, aBtnW, aBtnH, 7);
+    };
+    drawABtn(false);
+    const abTxt = this.add.text(cx, abBtnY, '✎  Editar alias', {
+      fontSize: `${aBtnFs}px`, color: '#8eefff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(7);
+    const abHit = this.add
+      .rectangle(cx, abBtnY, aBtnW, aBtnH)
+      .setDepth(8)
+      .setInteractive({ useHandCursor: true });
+    abHit.on('pointerover', () => { drawABtn(true); abTxt.setColor('#d4fbff'); });
+    abHit.on('pointerout',  () => { drawABtn(false); abTxt.setColor('#8eefff'); });
+    abHit.on('pointerdown', () => {
+      const next = window.prompt('Alias de juego', getPlayerDisplayName());
+      if (next === null) return;
+      savePlayerAlias(next);
+      this.aliasText.setText(getPlayerDisplayName());
     });
   }
 
@@ -678,109 +636,6 @@ export class MainMenuScene extends Phaser.Scene {
       this.joinInput.remove();
       this.joinInput = null;
     }
-  }
-
-  // ── AVATAR PICKER ─────────────────────────────────────────────────────────────
-
-  private openAvatarPicker() {
-    if (this.pickerObjects.length > 0) return;
-    const { width: w, height: h } = this.scale;
-    const layout = getLayout(w, h);
-    const cx = layout.cx;
-    const currentIdx = getSavedAvatarIndex();
-
-    const overlay = this.add.rectangle(cx, layout.cy, w, h, 0x000000, 0.84)
-      .setDepth(25).setInteractive();
-    overlay.on('pointerdown', () => this.closeAvatarPicker());
-
-    const panelW = Math.min(w * 0.90, 400);
-    const panelH = Math.min(h * 0.70, 510);
-    const panelTop = layout.cy - panelH / 2;
-
-    const panelG = this.add.graphics().setDepth(26);
-    panelG.fillStyle(0x030e1a, 0.97);
-    panelG.fillRoundedRect(cx - panelW / 2, panelTop, panelW, panelH, 10);
-    panelG.lineStyle(1.5, 0x5ee8ff, 0.80);
-    panelG.strokeRoundedRect(cx - panelW / 2, panelTop, panelW, panelH, 10);
-
-    const headerFs = Math.round(layout.fs(13));
-    const header = this.add.text(cx, panelTop + 26, 'ELEGÍ TU PERSONAJE', {
-      fontSize: `${headerFs}px`, color: '#5ee8ff', fontStyle: 'bold',
-    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 8).setDepth(27);
-
-    const cellSize = Math.min((panelW - 44) / 3, (panelH - 110) / 3);
-    const thumbR   = Math.floor(cellSize * 0.44);
-    const gridStartX = cx - cellSize;
-    const gridStartY = panelTop + 72 + cellSize / 2;
-
-    for (let i = 0; i < 9; i++) {
-      const col = i % 3, row = Math.floor(i / 3);
-      const tx = gridStartX + col * cellSize;
-      const ty = gridStartY + row * cellSize;
-
-      const borderG = this.add.graphics().setDepth(27);
-      const drawBorder = (selected: boolean, hover: boolean) => {
-        borderG.clear();
-        if (selected)        { borderG.fillStyle(0x5ee8ff, 1.0); borderG.fillCircle(tx, ty, thumbR + 4); }
-        else if (hover)      { borderG.fillStyle(0x3a7a9a, 0.75); borderG.fillCircle(tx, ty, thumbR + 4); }
-        else                 { borderG.fillStyle(0x18384e, 0.65); borderG.fillCircle(tx, ty, thumbR + 4); }
-      };
-      drawBorder(i === currentIdx, false);
-
-      this.add.circle(tx, ty, thumbR + 1, 0x030e1a, 1).setDepth(27);
-
-      const mG = this.add.graphics().setAlpha(0).setDepth(0);
-      mG.fillStyle(0xffffff).fillCircle(tx, ty, thumbR);
-      const tMask = mG.createGeometryMask();
-
-      const thumb = this.add.image(tx, ty, 'avatars', String(i))
-        .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setMask(tMask).setDepth(28)
-        .setInteractive({ useHandCursor: true });
-
-      if (this.textures.exists('avatar-ring')) {
-        const mini = this.add.image(tx, ty, 'avatar-ring')
-          .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setDepth(29).setAlpha(0.75);
-        this.pickerObjects.push(mini);
-      }
-
-      thumb.on('pointerdown', () => {
-        saveAvatarIndex(i);
-        this.closeAvatarPicker();
-        // Rebuild layout so avatar updates
-        this.onResize({ width: this.scale.width, height: this.scale.height } as Phaser.Structs.Size);
-      });
-      thumb.on('pointerover', () => { if (i !== getSavedAvatarIndex()) drawBorder(false, true); });
-      thumb.on('pointerout',  () => { if (i !== getSavedAvatarIndex()) drawBorder(false, false); });
-
-      this.pickerObjects.push(borderG, mG, thumb);
-    }
-
-    const closeBtnY = panelTop + panelH - 32;
-    const closeG = this.add.graphics().setDepth(27);
-    const drawClose = (hover: boolean) => {
-      closeG.clear();
-      closeG.fillStyle(hover ? 0x145f78 : 0x0d4d62, 0.97);
-      closeG.fillRoundedRect(cx - 80, closeBtnY - 18, 160, 36, 8);
-      closeG.lineStyle(1.5, 0x5ee8ff, 0.80);
-      closeG.strokeRoundedRect(cx - 80, closeBtnY - 18, 160, 36, 8);
-    };
-    drawClose(false);
-    const closeTxt = this.add.text(cx, closeBtnY, 'CERRAR', {
-      fontSize: `${Math.round(layout.fs(13))}px`, color: '#d4fbff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(28);
-    const closeHit = this.add.rectangle(cx, closeBtnY, 160, 36).setDepth(29).setInteractive({ useHandCursor: true });
-    closeHit.on('pointerover', () => drawClose(true));
-    closeHit.on('pointerout',  () => drawClose(false));
-    closeHit.on('pointerdown', () => this.closeAvatarPicker());
-
-    this.pickerObjects.push(overlay, panelG, header, closeG, closeTxt, closeHit);
-  }
-
-  private closeAvatarPicker() {
-    this.pickerObjects.forEach(o =>
-      (o as Phaser.GameObjects.GameObject & { destroy(): void }).destroy()
-    );
-    this.pickerObjects = [];
   }
 
   // ── BOTTOM BAR ────────────────────────────────────────────────────────────────
