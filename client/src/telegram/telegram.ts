@@ -89,8 +89,7 @@ export function initializeTelegram() {
 
   if (isTelegramMobile()) {
     document.body.classList.add("telegram-mobile");
-    // Always lock landscape — menus and gameplay are both horizontal
-    lockLandscape();
+    // No orientation lock — layout adapts to portrait and landscape
   }
 
   return tg;
@@ -141,13 +140,11 @@ export function lockLandscape() {
 export function enableGameplayLayout() {
   if (!isTelegramMobile()) return;
   document.body.classList.add("gameplay-mode");
-  lockLandscape();
+  // No orientation lock — GameScene also adapts its camera to the current orientation
 }
 
 export function disableGameplayLayout() {
   document.body.classList.remove("gameplay-mode", "portrait-mode");
-  // Maintain landscape orientation when returning to menus
-  lockLandscape();
 }
 
 export function getClientIdentity(): ClientIdentity {

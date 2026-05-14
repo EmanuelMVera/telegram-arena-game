@@ -6,24 +6,14 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // Select a random background index from 01 to 07
-    const randomIdx = Phaser.Math.Between(1, 7).toString().padStart(2, '0');
-    const bgKey = `BG_Loading_${randomIdx}`;
-    
-    // Store the selected key in the registry so LoadingScene can use it
-    this.registry.set('selectedLoadingBG', bgKey);
+    // Pick a random loading BG based on initial orientation.
+    // Desktop/landscape → BG_Desktop_Loading, mobile/portrait → BG_Mobile_Loading.
+    const portrait = window.innerHeight > window.innerWidth;
+    const n = String(Math.floor(Math.random() * 7) + 1).padStart(2, "0");
+    const prefix = portrait ? "BG_Mobile_Loading" : "BG_Desktop_Loading";
+    this.load.image("loading-bg", `/assets/background/${prefix}_${n}.jpg`);
 
-    // Load the specific random background
-    this.load.image(
-      "loading-background",
-      `/assets/background/BG_Loading_${randomIdx}.jpg`
-    );
-
-    this.load.image(
-      "arena-brawler-logo",
-      "/assets/ui/loading/arena-brawler-logo.png",
-    );
-
+    this.load.image("logo", "/assets/ui/loading/arena-brawler-logo.png");
     this.load.image("avatars", "/assets/avatars/avatars.png");
   }
 

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { socket } from '../network/socket';
 import {
   getClientIdentity,
   getPlayerDisplayName,
@@ -7,32 +6,52 @@ import {
   saveAvatarIndex,
   savePlayerAlias,
 } from '../telegram/telegram';
-
-type ParticipantData = { name: string; ready: boolean; isHost: boolean };
+import { socket } from '../network/socket';
+import { getLayout, applyBgCover, clamp } from '../utils/layout';
+import { buildAvatar } from '../utils/avatar';
 
 export class MainMenuScene extends Phaser.Scene {
   private aliasText!: Phaser.GameObjects.Text;
-  private avatarImage!: Phaser.GameObjects.Image;
-  private avatarDisplaySize = 0;
-  private pickerObjects: Phaser.GameObjects.GameObject[] = [];
-  private joinModalObjects: Phaser.GameObjects.GameObject[] = [];
-  private joinCodeText?: Phaser.GameObjects.Text;
-  private joinErrorText?: Phaser.GameObjects.Text;
   private framesRegistered = false;
+
+  // Avatar picker
+  private pickerObjects: Phaser.GameObjects.GameObject[] = [];
+
+  // Join modal
+  private joinModalObjects: Phaser.GameObjects.GameObject[] = [];
+  private joinInput: HTMLInputElement | null = null;
+  private joinErrorText: Phaser.GameObjects.Text | null = null;
 
   constructor() { super('MainMenuScene'); }
 
   create() {
-    const { width, height } = this.scale;
+    this.framesRegistered = false;
     this.registerAvatarFrames();
-    this.registerSocketEvents();
-    this.createBackground(width, height);
-    this.createAmbientFx(width, height);
-    this.createLogo(width, height);
-    this.createDecorativeElements(width, height);
-    this.createPlayerCard(width, height);
-    this.createButtons(width, height);
+    this.buildLayout();
+
+    this.scale.on('resize', this.onResize, this);
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+      this.cleanupJoinModal();
+      socket.off('roomCreated');
+      socket.off('roomJoined');
+      socket.off('roomError');
+    });
   }
+
+  private onResize(_size: Phaser.Structs.Size) {
+    // Rebuild everything — simplest and most robust approach for menus
+    this.children.removeAll(true);
+    this.tweens.killAll();
+    this.framesRegistered = false;
+    this.aliasText = undefined as unknown as Phaser.GameObjects.Text;
+    this.pickerObjects = [];
+    this.cleanupJoinModal();
+    this.registerAvatarFrames();
+    this.buildLayout();
+  }
+
+  // ── AVATAR FRAMES ────────────────────────────────────────────────────────────
 
   private registerAvatarFrames() {
     if (this.framesRegistered) return;
@@ -48,437 +67,744 @@ export class MainMenuScene extends Phaser.Scene {
     this.framesRegistered = true;
   }
 
-  private createBackground(w: number, h: number) {
-    this.cameras.main.setBackgroundColor('#020813');
-    const bg = this.add.image(w / 2, h / 2, 'bg-desktop').setDepth(-20);
-    bg.setScale(Math.max(w / bg.width, h / bg.height));
-    // Dark vignette overlay for Hollow Knight atmosphere
-    this.add.rectangle(w / 2, h / 2, w, h, 0x010a15, 0.50).setDepth(-10);
+  // ── FULL LAYOUT BUILD ─────────────────────────────────────────────────────────
+
+  private buildLayout() {
+    const { width: w, height: h } = this.scale;
+    const layout = getLayout(w, h);
+
+    this.createBackground(w, h, layout);
+    this.createVignette(w, h);
+    this.drawFrameCorners(w, h);
+
+    if (layout.isPortrait) {
+      this.buildPortraitLayout(w, h, layout);
+    } else {
+      this.buildLandscapeLayout(w, h, layout);
+    }
+
+    this.createBottomBar(w, h, layout);
   }
 
-  private createAmbientFx(w: number, h: number) {
-    // Floating soul particles
-    for (let i = 0; i < 26; i++) {
+  // ── BACKGROUND ───────────────────────────────────────────────────────────────
+
+  private createBackground(w: number, h: number, layout: ReturnType<typeof getLayout>) {
+    this.cameras.main.setBackgroundColor('#030810');
+
+    const bg = this.add.image(w / 2, h / 2, layout.bgKey).setDepth(-20);
+    applyBgCover(bg, w, h);
+
+    this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.28).setDepth(-9);
+
+    // Ambient particles
+    const colors = [0x57eaff, 0x8ef8ff, 0x2dd7e6, 0xb0f4ff, 0x44aaff];
+    for (let i = 0; i < 28; i++) {
+      const r = Phaser.Math.FloatBetween(0.8, 3.0);
+      const a = Phaser.Math.FloatBetween(0.12, 0.55);
+      const color = Phaser.Math.RND.pick(colors);
       const p = this.add.circle(
         Phaser.Math.Between(0, w),
-        Phaser.Math.Between(h * 0.1, h),
-        Phaser.Math.FloatBetween(1, 3.2),
-        0x5bd4ed,
-        Phaser.Math.FloatBetween(0.10, 0.28)
-      ).setDepth(-5).setBlendMode(Phaser.BlendModes.ADD);
-
+        Phaser.Math.Between(Math.floor(h * 0.35), h),
+        r, color, a,
+      ).setDepth(-3).setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({
         targets: p,
-        y: p.y - Phaser.Math.Between(35, 120),
-        x: p.x + Phaser.Math.Between(-22, 22),
+        y: p.y - Phaser.Math.Between(55, 150),
+        x: p.x + Phaser.Math.Between(-24, 24),
         alpha: 0,
-        duration: Phaser.Math.Between(3500, 7200),
+        duration: Phaser.Math.Between(3000, 7000),
+        delay: Phaser.Math.Between(0, 4000),
         repeat: -1,
-        delay: Phaser.Math.Between(0, 3000),
-        onRepeat: () =>
-          p.setPosition(
-            Phaser.Math.Between(0, w),
-            Phaser.Math.Between(h * 0.25, h)
-          ).setAlpha(Phaser.Math.FloatBetween(0.08, 0.28)),
+        onRepeat: () => {
+          p.setPosition(Phaser.Math.Between(0, w), Phaser.Math.Between(Math.floor(h * 0.35), h));
+          p.setAlpha(a);
+        },
       });
     }
 
-    // Large ambient soul orb in background
-    const orb = this.add.circle(w * 0.5, h * 0.52, Math.min(w, h) * 0.30, 0x03253d, 0.18)
-      .setDepth(-8).setBlendMode(Phaser.BlendModes.ADD);
+    const scan = this.add.rectangle(w / 2, h * 0.1, w, 1, 0x5ee8ff, 0.018)
+      .setDepth(-5).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: scan, y: h + 10, duration: 9000, repeat: -1, ease: 'Linear' });
+
+    this.tweens.add({ targets: bg, scale: bg.scale * 1.025, duration: 14000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+
+  private createVignette(w: number, h: number) {
+    const g = this.add.graphics().setDepth(-6);
+    for (let i = 10; i >= 1; i--) {
+      const t = i / 10;
+      const a = 0.11 * t * t;
+      g.fillStyle(0x000000, a);
+      g.fillRect(0, 0, w * 0.26 * t, h);
+      g.fillRect(w - w * 0.26 * t, 0, w * 0.26 * t, h);
+      g.fillRect(0, 0, w, h * 0.20 * t);
+      g.fillRect(0, h - h * 0.20 * t, w, h * 0.20 * t);
+    }
+  }
+
+  private drawFrameCorners(w: number, h: number) {
+    const g = this.add.graphics().setDepth(-4);
+    g.lineStyle(1, 0x5ee8ff, 0.30);
+    const m = 14, s = 20;
+    ([[m, m], [w - m, m], [m, h - m], [w - m, h - m]] as [number, number][]).forEach(([x, y]) => {
+      const sx = x === m ? 1 : -1, sy = y === m ? 1 : -1;
+      g.lineBetween(x, y, x + sx * s, y);
+      g.lineBetween(x, y, x, y + sy * s);
+      g.fillStyle(0x5ee8ff, 0.55);
+      g.fillRect(x - 1, y - 1, 2, 2);
+    });
+  }
+
+  // ── PORTRAIT LAYOUT ───────────────────────────────────────────────────────────
+  // Stacked vertically: logo → avatar → name → buttons
+
+  private buildPortraitLayout(w: number, h: number, layout: ReturnType<typeof getLayout>) {
+    const cx = layout.cx;
+
+    // Logo
+    this.createLogoSection(cx, h * 0.075, w, layout);
+
+    // Avatar card — centred, takes ~20% of height
+    const avatarR = clamp(Math.round(Math.min(w * 0.115, h * 0.085)), 38, 70);
+    const avatarCy = h * 0.285;
+    this.createAvatarCard(cx, avatarCy, avatarR, w, h, layout);
+
+    // Name / alias
+    const nameY = avatarCy + avatarR + layout.pad * 2.2 + 20;
+    this.createNameSection(cx, nameY, avatarR, layout);
+
+    // Buttons centred
+    const btnTopY = nameY + layout.fs(24) + layout.pad * 4;
+    this.createButtons(cx, btnTopY, Math.min(w * 0.86, 420), layout);
+  }
+
+  // ── LANDSCAPE LAYOUT ──────────────────────────────────────────────────────────
+  // Two columns: left = logo + buttons, right = avatar + name
+
+  private buildLandscapeLayout(w: number, h: number, layout: ReturnType<typeof getLayout>) {
+    const leftCx = w * 0.27;
+    const rightCx = w * 0.73;
+
+    // Logo on the left side
+    this.createLogoSection(leftCx, h * 0.12, w, layout);
+
+    // Avatar on the right
+    const avatarR = clamp(Math.round(Math.min(w * 0.080, h * 0.115)), 38, 72);
+    const avatarCy = h * 0.41;
+    this.createAvatarCard(rightCx, avatarCy, avatarR, w, h, layout);
+
+    // Name on the right, below avatar
+    const nameY = avatarCy + avatarR + layout.pad * 2 + 16;
+    this.createNameSection(rightCx, nameY, avatarR, layout);
+
+    // Buttons on the left
+    const btnTopY = h * 0.34;
+    this.createButtons(leftCx, btnTopY, Math.min(w * 0.48, 420), layout);
+  }
+
+  // ── LOGO ──────────────────────────────────────────────────────────────────────
+
+  private createLogoSection(cx: number, cy: number, w: number, layout: ReturnType<typeof getLayout>) {
+    // Diamond + decorative lines above logo text
+    const ornY = cy - layout.vmin * 0.045;
+    this.drawDiamond(cx, ornY, 8, 0x5ee8ff, 0.90).setDepth(3);
+    const lineG = this.add.graphics().setDepth(3);
+    lineG.lineStyle(1, 0x5ee8ff, 0.40);
+    lineG.lineBetween(cx - 70, ornY, cx - 18, ornY);
+    lineG.lineBetween(cx + 18, ornY, cx + 70, ornY);
+
+    if (this.textures.exists('logo')) {
+      const logo = this.add.image(cx, cy, 'logo').setDepth(3);
+      const maxLogoW = Math.min(w * 0.32, 320);
+      logo.setScale(Math.min(maxLogoW / logo.width, layout.vmin * 0.14 / logo.height));
+    } else {
+      // Fallback text title
+      const fs = Math.round(layout.fs(28));
+      this.add.text(cx, cy, 'ARENA\nBRAWLER 2D', {
+        align: 'center', fontSize: `${fs}px`, color: '#c2f8ff', fontStyle: 'bold',
+        lineSpacing: Math.round(fs * 0.18),
+      }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 22).setDepth(3);
+    }
+
+    // Separator below logo
+    const sepW = Math.min(w * 0.48, 260);
+    const sepY = cy + layout.vmin * 0.085;
+    const g2 = this.add.graphics().setDepth(2);
+    g2.lineStyle(1, 0x5ee8ff, 0.35);
+    g2.lineBetween(cx - sepW / 2, sepY, cx - 8, sepY);
+    g2.lineBetween(cx + 8, sepY, cx + sepW / 2, sepY);
+    this.drawDiamond(cx, sepY, 4, 0x5ee8ff, 0.75).setDepth(2);
+  }
+
+  // ── AVATAR CARD ───────────────────────────────────────────────────────────────
+
+  private createAvatarCard(
+    cx: number,
+    cy: number,
+    avatarR: number,
+    _w: number,
+    _h: number,
+    _layout: ReturnType<typeof getLayout>,
+  ) {
+    const identity = getClientIdentity();
+
+    // Glow layers (ADD blend)
+    const glowG = this.add.graphics().setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+    ([{ r: avatarR + 34, a: 0.06 }, { r: avatarR + 20, a: 0.10 }, { r: avatarR + 12, a: 0.15 }])
+      .forEach(({ r, a }) => { glowG.fillStyle(0x3399ff, a); glowG.fillCircle(cx, cy, r); });
+
+    // Dark bg so mask is clean
+    this.add.circle(cx, cy, avatarR + 2, 0x020d1a, 1).setDepth(5);
+
+    // Avatar (Telegram photo or initials)
+    const { setDepth } = buildAvatar(this, cx, cy, avatarR, identity, 6);
+    setDepth(6);
+
+    // Ornamental ring
+    const ringSize = avatarR * 3.2;
+    const ringImg = this.add.image(cx, cy, 'avatar-ring')
+      .setDisplaySize(ringSize, ringSize).setDepth(7);
     this.tweens.add({
-      targets: orb,
-      alpha: { from: 0.12, to: 0.22 },
-      scale: { from: 1, to: 1.05 },
-      duration: 3400,
-      yoyo: true,
-      repeat: -1,
+      targets: ringImg,
+      alpha: { from: 0.82, to: 1.0 },
+      scaleX: ringImg.scaleX * 1.02,
+      scaleY: ringImg.scaleY * 1.02,
+      duration: 2800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    // Orbiting dots
+    const orbitR = avatarR + 20;
+    const numDots = 7;
+    const orbitState = { angle: 0 };
+    const orbitDots = Array.from({ length: numDots }, (_, i) => {
+      const a = (i / numDots) * Math.PI * 2;
+      const big = i % 3 === 0;
+      return this.add.arc(
+        cx + Math.cos(a) * orbitR, cy + Math.sin(a) * orbitR,
+        big ? 3.0 : 1.8, 0, 360, false,
+        big ? 0x8ef8ff : 0x5ee8ff, big ? 0.9 : 0.55,
+      ).setDepth(8).setBlendMode(Phaser.BlendModes.ADD);
+    });
+    this.tweens.add({
+      targets: orbitState, angle: Math.PI * 2, duration: 5800, repeat: -1, ease: 'Linear',
+      onUpdate: () => {
+        orbitDots.forEach((dot, i) => {
+          const a = orbitState.angle + (i / numDots) * Math.PI * 2;
+          dot.setPosition(cx + Math.cos(a) * orbitR, cy + Math.sin(a) * orbitR);
+          dot.setAlpha(0.25 + 0.75 * ((1 + Math.sin(a * 2 + i)) / 2));
+        });
+      },
     });
   }
 
-  private createLogo(w: number, h: number) {
-    const logo = this.add.image(w * 0.5, h * 0.12, 'logo').setDepth(5);
-    const maxW = Math.min(w * 0.30, 480);
-    logo.setDisplaySize(maxW, (maxW / logo.width) * logo.height);
-    this.tweens.add({ targets: logo, alpha: { from: 0.88, to: 1 }, duration: 2400, yoyo: true, repeat: -1 });
-  }
+  // ── NAME / ALIAS ──────────────────────────────────────────────────────────────
 
-  private createDecorativeElements(w: number, h: number) {
-    const g = this.add.graphics().setDepth(3);
-    const lineY = h * 0.236;
-    const lineW = w * 0.54;
-    const lx = (w - lineW) / 2;
-    const rx = (w + lineW) / 2;
+  private createNameSection(
+    cx: number,
+    nameY: number,
+    _avatarR: number,
+    layout: ReturnType<typeof getLayout>,
+  ) {
+    const nameFs = Math.round(layout.fs(22));
+    this.aliasText = this.add.text(cx, nameY, getPlayerDisplayName(), {
+      fontSize: `${nameFs}px`, color: '#e8feff', fontStyle: 'bold',
+    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 10).setDepth(6);
 
-    // Main horizontal accent line
-    g.lineStyle(1, 0x5ee8ff, 0.20);
-    g.beginPath();
-    g.moveTo(lx, lineY);
-    g.lineTo(rx, lineY);
-    g.strokePath();
-
-    // Center diamond ornament
-    g.lineStyle(1.5, 0x5ee8ff, 0.62);
-    g.beginPath();
-    g.moveTo(w / 2, lineY - 6);
-    g.lineTo(w / 2 + 6, lineY);
-    g.lineTo(w / 2, lineY + 6);
-    g.lineTo(w / 2 - 6, lineY);
-    g.closePath();
-    g.strokePath();
-
-    // Flanking dots
-    const dots: [number, number][] = [[w / 2 - 18, 0.45], [w / 2 - 32, 0.20], [w / 2 + 18, 0.45], [w / 2 + 32, 0.20]];
-    dots.forEach(([x, alpha]) => {
-      g.fillStyle(0x5ee8ff, alpha);
-      g.fillCircle(x, lineY, 2);
-    });
-  }
-
-  private createPlayerCard(w: number, h: number) {
-    // Card dimensions — wider so the name area has room
-    const cardW = Math.min(w * 0.46, 730);
-    const cardH = Math.min(h * 0.42, 320);
-    const cardX = w * 0.27;
-    const cardY = h * 0.60;
-
-    // Avatar sizing
-    const avatarR = Math.max(46, Math.min(76, Math.round(h * 0.080)));
-    const maskR = avatarR;
-    const ringSize = avatarR * 2.55;
-    // Overscan: display avatar larger than mask so off-center artwork stays within the circle
-    this.avatarDisplaySize = avatarR * 2.85;
-
-    // ── Card background ──
-    const card = this.add.graphics().setDepth(4);
-    card.fillStyle(0x030e1c, 0.92);
-    card.fillRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 14);
-    card.lineStyle(1.5, 0x5ee8ff, 0.34);
-    card.strokeRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 14);
-
-    // Subtle inner top glow stripe
-    card.lineStyle(1, 0x5ee8ff, 0.09);
-    card.beginPath();
-    card.moveTo(cardX - cardW / 2 + 30, cardY - cardH / 2 + 1);
-    card.lineTo(cardX + cardW / 2 - 30, cardY - cardH / 2 + 1);
-    card.strokePath();
-
-    // Corner brackets (Hollow Knight UI style)
-    const cl = cardX - cardW / 2, cr = cardX + cardW / 2;
-    const ct = cardY - cardH / 2, cb = cardY + cardH / 2;
-    const cLen = 14;
-    card.lineStyle(2, 0x5ee8ff, 0.65);
-    [
-      [cl, ct,  1,  1],
-      [cr, ct, -1,  1],
-      [cl, cb,  1, -1],
-      [cr, cb, -1, -1],
-    ].forEach(([x, y, sx, sy]) => {
-      card.beginPath();
-      card.moveTo(x, y + sy * cLen);
-      card.lineTo(x, y);
-      card.lineTo(x + sx * cLen, y);
-      card.strokePath();
-    });
-
-    // ── Avatar ──
-    const avatarX = cardX - cardW * 0.30;
-    const avatarY = cardY;
-
-    const avatarMaskG = this.add.graphics().setVisible(false).setDepth(5);
-    avatarMaskG.fillStyle(0xffffff, 1).fillCircle(avatarX, avatarY, maskR);
-
-    this.avatarImage = this.add.image(avatarX, avatarY, 'avatars', String(getSavedAvatarIndex()))
-      .setDepth(6)
-      .setDisplaySize(this.avatarDisplaySize, this.avatarDisplaySize)
-      .setMask(avatarMaskG.createGeometryMask());
-
-    const ring = this.add.image(avatarX, avatarY, 'avatar-ring')
-      .setDepth(8)
-      .setDisplaySize(ringSize, ringSize);
-    this.tweens.add({ targets: ring, alpha: { from: 0.74, to: 1 }, duration: 2100, yoyo: true, repeat: -1 });
-
-    // Small edit-avatar button (bottom-right of avatar circle)
-    const editAvatarBtn = this.add.text(
-      avatarX + maskR * 0.65,
-      avatarY + maskR * 0.65,
-      '✎',
-      { fontSize: '14px', color: '#c8f5ff', backgroundColor: '#0a2535', padding: { x: 5, y: 2 } }
-    ).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
-    editAvatarBtn.on('pointerdown', () => this.openAvatarPicker(avatarR));
-
-    // ── Vertical separator between avatar and text ──
-    const textX = cardX - cardW * 0.03;
-    const sepX = avatarX + maskR + Math.round((textX - avatarX - maskR) * 0.28);
+    // Separator
+    const sepW = Math.min(layout.vmin * 0.30, 130);
+    const sepY = nameY + nameFs + layout.pad * 0.8;
     const sepG = this.add.graphics().setDepth(5);
-    sepG.lineStyle(1, 0x1a5a6e, 0.50);
-    sepG.beginPath();
-    sepG.moveTo(sepX, cardY - cardH / 2 + 24);
-    sepG.lineTo(sepX, cardY + cardH / 2 - 24);
-    sepG.strokePath();
+    sepG.lineStyle(1, 0x5ee8ff, 0.20);
+    sepG.lineBetween(cx - sepW / 2, sepY, cx + sepW / 2, sepY);
+    this.drawDiamond(cx, sepY, 3, 0x5ee8ff, 0.55).setDepth(5);
 
-    // ── Text area ──
-    const textAreaW = (cardX + cardW / 2 - 20) - textX;
+    // Mini action buttons: Alias | Avatar
+    const abBtnY = sepY + layout.pad * 1.8;
+    const halfGap = Math.min(layout.vmin * 0.20, 90);
+    const aBtnW = Math.min(layout.vmin * 0.35, 130);
+    const aBtnH = Math.max(26, Math.round(layout.fs(14) * 2));
+    const aBtnFs = Math.round(layout.fs(12));
 
-    // "JUGADOR" label above name
-    this.add.text(textX, cardY - 52, 'J U G A D O R', {
-      fontSize: '10px', color: '#256a82', fontStyle: 'bold',
-    }).setOrigin(0, 0.5).setDepth(7);
-
-    // Player name — truncated to prevent overflow
-    const displayName = this.truncateName(getPlayerDisplayName(), 15);
-    this.aliasText = this.add.text(textX, cardY - 14, displayName, {
-      fontSize: displayName.length > 10 ? '20px' : '24px',
-      color: '#dff8ff',
-      fontStyle: 'bold',
-      wordWrap: { width: textAreaW },
-    }).setOrigin(0, 0.5).setDepth(7);
-
-    // Edit name button
-    const editNameBtn = this.add.text(textX, cardY + 32, '✎  Editar nombre', {
-      fontSize: '13px',
-      color: '#3fa8c2',
-      backgroundColor: '#071620',
-      padding: { x: 10, y: 6 },
-    }).setOrigin(0, 0.5).setDepth(7).setInteractive({ useHandCursor: true });
-
-    editNameBtn.on('pointerover', () => editNameBtn.setStyle({ color: '#96e3f8' }));
-    editNameBtn.on('pointerout', () => editNameBtn.setStyle({ color: '#3fa8c2' }));
-    editNameBtn.on('pointerdown', () => {
-      const next = window.prompt('Alias de juego', getPlayerDisplayName());
-      if (next === null) return;
-      savePlayerAlias(next);
-      const newDisplay = this.truncateName(getPlayerDisplayName(), 15);
-      this.aliasText.setText(newDisplay);
-      this.aliasText.setFontSize(newDisplay.length > 10 ? '20px' : '24px');
+    [
+      {
+        x: cx - halfGap,
+        label: '✎  Alias',
+        action: () => {
+          const next = window.prompt('Alias de juego', getPlayerDisplayName());
+          if (next === null) return;
+          savePlayerAlias(next);
+          this.aliasText.setText(getPlayerDisplayName());
+        },
+      },
+      {
+        x: cx + halfGap,
+        label: '◈  Avatar',
+        action: () => this.openAvatarPicker(),
+      },
+    ].forEach(({ x, label, action }) => {
+      const abG = this.add.graphics().setDepth(6);
+      const drawABtn = (hover: boolean) => {
+        abG.clear();
+        abG.fillStyle(hover ? 0x143d54 : 0x081824, hover ? 0.97 : 0.88);
+        abG.fillRoundedRect(x - aBtnW / 2, abBtnY - aBtnH / 2, aBtnW, aBtnH, 7);
+        abG.lineStyle(1, 0x5ee8ff, hover ? 0.80 : 0.38);
+        abG.strokeRoundedRect(x - aBtnW / 2, abBtnY - aBtnH / 2, aBtnW, aBtnH, 7);
+      };
+      drawABtn(false);
+      const abTxt = this.add.text(x, abBtnY, label, {
+        fontSize: `${aBtnFs}px`, color: '#8eefff', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(7);
+      const abHit = this.add
+        .rectangle(x, abBtnY, aBtnW, aBtnH)
+        .setDepth(8)
+        .setInteractive({ useHandCursor: true });
+      abHit.on('pointerover', () => { drawABtn(true); abTxt.setColor('#d4fbff'); });
+      abHit.on('pointerout',  () => { drawABtn(false); abTxt.setColor('#8eefff'); });
+      abHit.on('pointerdown', action);
     });
   }
 
-  private truncateName(name: string, maxLen: number): string {
-    return name.length > maxLen ? name.slice(0, maxLen - 2) + '..' : name;
-  }
+  // ── MAIN BUTTONS ──────────────────────────────────────────────────────────────
 
-  private createButtons(w: number, h: number) {
-    const cx = w * 0.72;
-    const btnW = Math.min(w * 0.30, 430);
-    const btnH = Math.min(h * 0.148, 118);
-    const gap = Math.min(h * 0.068, 54);
-    const totalH = btnH * 2 + gap;
-    // Center the button column vertically aligned with the player card area
-    const startY = h * 0.57 - totalH / 2 + btnH / 2;
+  private createButtons(
+    cx: number,
+    topY: number,
+    maxBtnW: number,
+    layout: ReturnType<typeof getLayout>,
+  ) {
+    const defs: { key: string; label: string; action: () => void }[] = [
+      {
+        key: 'btn-create',
+        label: 'CREAR PARTIDA',
+        action: () => this.handleCreate(),
+      },
+      {
+        key: 'btn-join',
+        label: 'UNIRSE A PARTIDA',
+        action: () => this.openJoinModal(),
+      },
+    ];
 
-    const makeBtn = (key: string, y: number, action: () => void) => {
-      const btn = this.add.image(cx, y, key)
-        .setDepth(8)
-        .setDisplaySize(btnW, btnH)
-        .setInteractive({ useHandCursor: true });
-      const glow = this.add.rectangle(cx, y, btnW + 26, btnH + 20, 0x52d7ff, 0)
-        .setDepth(7).setBlendMode(Phaser.BlendModes.ADD);
-      const shimmer = this.add.rectangle(cx - btnW / 2, y, 18, btnH * 0.72, 0xe7ffff, 0)
-        .setDepth(9).setBlendMode(Phaser.BlendModes.ADD);
+    const spacing = Math.min(72, Math.round(layout.vmin * 0.14));
+
+    defs.forEach(({ key, label, action }, idx) => {
+      const by = topY + idx * spacing;
+
+      const btn = this.add.image(cx, by, key).setDepth(8).setInteractive({ useHandCursor: true });
+      const scale = Math.min(maxBtnW / btn.width, 80 / btn.height);
+      btn.setScale(scale);
+      const dW = btn.displayWidth;
+      const dH = btn.displayHeight;
+
+      // Drop shadow
+      const shadow = this.add.graphics().setDepth(6).setAlpha(0.50);
+      shadow.fillStyle(0x000000, 0.70);
+      shadow.fillRoundedRect(cx - dW / 2 + 6, by - dH / 2 + 6, dW, dH, 5);
+
+      // Idle glow
+      const idleGlow = this.add.graphics().setDepth(7).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.15);
+      idleGlow.fillStyle(0x0044aa, 0.45);
+      idleGlow.fillRoundedRect(cx - dW / 2 - 6, by - dH / 2 - 3, dW + 12, dH + 6, 8);
+      this.tweens.add({
+        targets: idleGlow,
+        alpha: { from: 0.08, to: 0.26 },
+        duration: 1800 + idx * 400,
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+
+      // Hover / press glow refs
+      const atmoGlow = this.add.graphics().setDepth(7).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      atmoGlow.fillStyle(0x1155cc, 0.55);
+      atmoGlow.fillRoundedRect(cx - dW / 2 - 18, by - dH * 0.9, dW + 36, dH * 1.8, 14);
+
+      const rimGlow = this.add.graphics().setDepth(9).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      rimGlow.lineStyle(4, 0x66aaff, 0.8);
+      rimGlow.strokeRoundedRect(cx - dW / 2, by - dH / 2, dW, dH, 4);
+
+      // Fallback label (shown if image asset has no text baked in)
+      const lblFs = Math.round(layout.fs(13));
+      const lbl = this.add.text(cx, by, label, {
+        fontSize: `${lblFs}px`, color: '#ddf5ff', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(10).setAlpha(0);
+      // Only show label if the button image appears blank (can't detect easily, keep at 0)
 
       btn.on('pointerover', () => {
-        btn.setTint(0xcdf8ff);
-        this.tweens.add({ targets: glow, alpha: 0.28, duration: 140 });
-        shimmer.setAlpha(0.50).setX(cx - btnW / 2 - 14);
-        this.tweens.add({ targets: shimmer, x: cx + btnW / 2 + 14, alpha: 0, duration: 400 });
+        this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
+        this.tweens.add({ targets: btn, scaleX: scale * 1.03, scaleY: scale * 1.03, duration: 120, ease: 'Back.easeOut' });
+        this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 1, duration: 140 });
+        btn.setTint(0xbbddff);
+        void lbl; // suppress unused warning
       });
-      btn.on('pointerout', () => {
-        btn.clearTint();
-        this.tweens.add({ targets: glow, alpha: 0, duration: 180 });
-      });
-      btn.on('pointerdown', () => {
-        this.tweens.add({ targets: btn, scaleX: 0.95, scaleY: 0.95, duration: 75, yoyo: true });
-        this.emitButtonSpark(cx, y, btnW, btnH);
-        action();
-      });
-    };
 
-    makeBtn('btn-create', startY, () => socket.emit('createRoom', getClientIdentity()));
-    makeBtn('btn-join', startY + btnH + gap, () => this.openJoinModal());
+      btn.on('pointerout', () => {
+        this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
+        this.tweens.add({ targets: btn, scaleX: scale, scaleY: scale, duration: 160, ease: 'Power2' });
+        this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 0, duration: 200 });
+        btn.clearTint();
+      });
+
+      btn.on('pointerdown', () => {
+        this.tweens.killTweensOf(btn);
+        this.tweens.add({ targets: btn, scaleX: scale * 0.96, scaleY: scale * 0.96, duration: 65, yoyo: true });
+        btn.setTint(0xffffff);
+        this.time.delayedCall(80, () => btn.setTint(0xbbddff));
+        this.tweens.add({ targets: rimGlow, alpha: 2.0, duration: 60, yoyo: true });
+        this.emitButtonSpark(cx, by, dW, dH);
+        this.time.delayedCall(90, action);
+      });
+    });
   }
+
+  private emitButtonSpark(cx: number, cy: number, bw: number, bh: number) {
+    for (let i = 0; i < 12; i++) {
+      const side = Phaser.Math.Between(0, 3);
+      let px = cx, py = cy;
+      if (side === 0)      { px = cx + Phaser.Math.Between(-bw / 2, bw / 2); py = cy - bh / 2; }
+      else if (side === 1) { px = cx + Phaser.Math.Between(-bw / 2, bw / 2); py = cy + bh / 2; }
+      else if (side === 2) { px = cx - bw / 2; py = cy + Phaser.Math.Between(-bh / 2, bh / 2); }
+      else                 { px = cx + bw / 2; py = cy + Phaser.Math.Between(-bh / 2, bh / 2); }
+      const r = Phaser.Math.FloatBetween(2.0, 5.0);
+      const color = Phaser.Math.RND.pick([0x88ccff, 0xaaddff, 0x5599ee, 0xffffff]);
+      const spark = this.add.arc(px, py, r, 0, 360, false, color, 1)
+        .setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const speed = Phaser.Math.FloatBetween(45, 130);
+      this.tweens.add({
+        targets: spark,
+        x: px + Math.cos(angle) * speed,
+        y: py + Math.sin(angle) * speed - Phaser.Math.FloatBetween(0, 35),
+        alpha: 0, scaleX: 0, scaleY: 0,
+        duration: Phaser.Math.Between(300, 620),
+        ease: 'Power2.easeOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  // ── CREATE ROOM ───────────────────────────────────────────────────────────────
+
+  private handleCreate() {
+    const identity = getClientIdentity();
+
+    // Remove any stale listeners before registering
+    socket.off('roomCreated');
+    socket.off('roomError');
+
+    socket.once('roomCreated', (data: { roomId: string; participants: Record<string, unknown>; isHost: boolean }) => {
+      socket.off('roomError');
+      this.cameras.main.fadeOut(260, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('LobbyScene', { roomId: data.roomId, isHost: true, participants: data.participants });
+      });
+    });
+
+    socket.once('roomError', (err: { message: string }) => {
+      socket.off('roomCreated');
+      this.showFloatingError(err.message);
+    });
+
+    socket.emit('createRoom', identity);
+  }
+
+  private showFloatingError(msg: string) {
+    const { width: w, height: h } = this.scale;
+    const errTxt = this.add.text(w / 2, h * 0.15, msg, {
+      fontSize: `${Math.round(getLayout(w, h).fs(14))}px`,
+      color: '#ff6666', fontStyle: 'bold',
+      backgroundColor: '#1a0000',
+      padding: { x: 12, y: 6 },
+    }).setOrigin(0.5).setDepth(30);
+    this.tweens.add({
+      targets: errTxt, alpha: 0, duration: 300,
+      delay: 2800,
+      onComplete: () => errTxt.destroy(),
+    });
+  }
+
+  // ── JOIN MODAL ────────────────────────────────────────────────────────────────
 
   private openJoinModal() {
     if (this.joinModalObjects.length > 0) return;
     const { width: w, height: h } = this.scale;
-    let code = '';
-    const panelW = Math.min(w * 0.44, 550);
-    const panelH = Math.min(h * 0.56, 390);
-    const panelX = w / 2 - panelW / 2;
-    const panelY = h / 2 - panelH / 2;
+    const layout = getLayout(w, h);
+    const cx = layout.cx;
+    const panelW = Math.min(w * 0.88, 420);
+    const panelH = Math.min(h * 0.52, 360);
+    const panelTop = layout.cy - panelH / 2;
 
-    const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.74)
-      .setDepth(30).setInteractive();
-
-    const panelG = this.add.graphics().setDepth(31);
-    panelG.fillStyle(0x031120, 0.98);
-    panelG.fillRoundedRect(panelX, panelY, panelW, panelH, 12);
-    panelG.lineStyle(1.5, 0x5ee8ff, 0.74);
-    panelG.strokeRoundedRect(panelX, panelY, panelW, panelH, 12);
-
-    const title = this.add.text(w / 2, panelY + panelH * 0.17, 'UNIRSE A PARTIDA', {
-      fontSize: '21px', color: '#b8f3ff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(32);
-
-    const inputBg = this.add.rectangle(w / 2, h / 2 - panelH * 0.04, Math.min(panelW * 0.68, 310), 54, 0x061a2a, 1)
-      .setDepth(32).setStrokeStyle(1, 0x5ee8ff, 0.80).setInteractive({ useHandCursor: true });
-
-    this.joinCodeText = this.add.text(w / 2, h / 2 - panelH * 0.04, '______', {
-      fontSize: '28px', color: '#7ee8ff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(33);
-
-    this.joinErrorText = this.add.text(w / 2, h / 2 + panelH * 0.18, '', {
-      fontSize: '14px', color: '#ff9aaa',
-    }).setOrigin(0.5).setDepth(33);
-
-    inputBg.on('pointerdown', () => {
-      const raw = window.prompt('Código de sala (6 caracteres)', code);
-      if (raw === null) return;
-      code = raw.trim().toUpperCase();
-      this.joinCodeText?.setText((code || '______').slice(0, 8));
-      this.joinErrorText?.setText('');
-    });
-
-    const btnY = panelY + panelH * 0.80;
-    const joinBtn = this.add.rectangle(w / 2 - 85, btnY, 148, 44, 0x0d4d62, 0.98)
-      .setDepth(32).setStrokeStyle(1, 0x5ee8ff, 1).setInteractive({ useHandCursor: true });
-    const joinTxt = this.add.text(w / 2 - 85, btnY, 'UNIRSE', {
-      fontSize: '17px', color: '#d0faff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(33);
-
-    const cancelBtn = this.add.rectangle(w / 2 + 85, btnY, 148, 44, 0x0f1f2e, 0.98)
-      .setDepth(32).setStrokeStyle(1, 0x3a7a90, 0.65).setInteractive({ useHandCursor: true });
-    const cancelTxt = this.add.text(w / 2 + 85, btnY, 'CANCELAR', {
-      fontSize: '15px', color: '#6ac4d8',
-    }).setOrigin(0.5).setDepth(33);
-
-    joinBtn.on('pointerdown', () => {
-      if (!code.trim()) {
-        this.joinErrorText?.setText('Ingresá un código válido.');
-        return;
-      }
-      socket.emit('joinRoom', { roomId: code.trim().toUpperCase(), identity: getClientIdentity() });
-    });
-    cancelBtn.on('pointerdown', () => this.closeJoinModal());
+    // Overlay
+    const overlay = this.add.rectangle(cx, layout.cy, w, h, 0x000000, 0.82)
+      .setDepth(25).setInteractive();
     overlay.on('pointerdown', () => this.closeJoinModal());
 
-    this.joinModalObjects.push(
-      overlay, panelG, title, inputBg,
-      this.joinCodeText, this.joinErrorText,
-      joinBtn, joinTxt, cancelBtn, cancelTxt,
-    );
+    // Panel
+    const panelG = this.add.graphics().setDepth(26);
+    panelG.fillStyle(0x030e1a, 0.97);
+    panelG.fillRoundedRect(cx - panelW / 2, panelTop, panelW, panelH, 10);
+    panelG.lineStyle(1.5, 0x5ee8ff, 0.80);
+    panelG.strokeRoundedRect(cx - panelW / 2, panelTop, panelW, panelH, 10);
+
+    // Title
+    const titleFs = Math.round(layout.fs(14));
+    const header = this.add.text(cx, panelTop + 28, 'INGRESÁ EL CÓDIGO DE SALA', {
+      fontSize: `${titleFs}px`, color: '#5ee8ff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(27);
+
+    // HTML input element (simplest cross-platform text entry)
+    const inputY = panelTop + panelH * 0.44;
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.maxLength = 6;
+    inputEl.placeholder = 'CÓDIGO';
+    inputEl.style.cssText = `
+      position:absolute; z-index:9999;
+      width:200px; height:44px;
+      font-size:24px; text-align:center; letter-spacing:8px;
+      text-transform:uppercase; font-family:monospace;
+      background:rgba(0,0,0,0.75); color:#ffffff;
+      border:1.5px solid #5ee8ff; border-radius:6px;
+      outline:none; pointer-events:auto;
+    `;
+    // Position over the canvas
+    this.positionInputEl(inputEl, cx, inputY, w, h);
+    document.body.appendChild(inputEl);
+    this.joinInput = inputEl;
+    setTimeout(() => inputEl.focus(), 50);
+
+    // Error text placeholder
+    const errTxt = this.add.text(cx, inputY + 36, '', {
+      fontSize: `${Math.round(layout.fs(12))}px`, color: '#ff6666',
+    }).setOrigin(0.5).setDepth(27);
+    this.joinErrorText = errTxt;
+
+    // Confirm button
+    const confirmY = panelTop + panelH * 0.72;
+    const cbW = Math.min(panelW * 0.55, 200), cbH = Math.max(36, Math.round(layout.fs(15) * 2.2));
+    const confirmG = this.add.graphics().setDepth(27);
+    const drawConfirm = (hover: boolean) => {
+      confirmG.clear();
+      confirmG.fillStyle(hover ? 0x145f78 : 0x0d4d62, 0.97);
+      confirmG.fillRoundedRect(cx - cbW / 2, confirmY - cbH / 2, cbW, cbH, 8);
+      confirmG.lineStyle(1.5, 0x5ee8ff, 0.80);
+      confirmG.strokeRoundedRect(cx - cbW / 2, confirmY - cbH / 2, cbW, cbH, 8);
+    };
+    drawConfirm(false);
+    const confirmTxt = this.add.text(cx, confirmY, 'UNIRSE', {
+      fontSize: `${Math.round(layout.fs(13))}px`, color: '#d4fbff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(28);
+    const confirmHit = this.add
+      .rectangle(cx, confirmY, cbW, cbH)
+      .setDepth(29).setInteractive({ useHandCursor: true });
+    confirmHit.on('pointerover', () => drawConfirm(true));
+    confirmHit.on('pointerout',  () => drawConfirm(false));
+    confirmHit.on('pointerdown', () => this.submitJoinCode(inputEl.value));
+
+    // Close button
+    const closeY = panelTop + panelH - 30;
+    const closeTxt = this.add.text(cx, closeY, 'CANCELAR', {
+      fontSize: `${Math.round(layout.fs(11))}px`, color: '#4a8fa8',
+    }).setOrigin(0.5).setDepth(27).setInteractive({ useHandCursor: true });
+    closeTxt.on('pointerdown', () => this.closeJoinModal());
+
+    // ENTER key
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') this.submitJoinCode(inputEl.value);
+      if (e.key === 'Escape') this.closeJoinModal();
+    };
+    window.addEventListener('keydown', onKey);
+
+    this.joinModalObjects.push(overlay, panelG, header, errTxt, confirmG, confirmTxt, confirmHit, closeTxt);
+    // Store onKey cleanup in scene data
+    this.data.set('_joinKeyHandler', onKey);
+  }
+
+  private positionInputEl(el: HTMLInputElement, cx: number, cy: number, w: number, h: number) {
+    const canvas = this.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    // Map Phaser coordinates to screen coordinates
+    const scaleX = rect.width / w;
+    const scaleY = rect.height / h;
+    const elW = 200;
+    const elH = 44;
+    el.style.left = `${rect.left + cx * scaleX - elW / 2}px`;
+    el.style.top  = `${rect.top  + cy * scaleY - elH / 2}px`;
+    el.style.width  = `${elW}px`;
+    el.style.height = `${elH}px`;
+  }
+
+  private submitJoinCode(raw: string) {
+    const code = raw.trim().toUpperCase();
+    if (code.length !== 6) {
+      if (this.joinErrorText) this.joinErrorText.setText('El código debe tener 6 caracteres');
+      return;
+    }
+    if (this.joinErrorText) this.joinErrorText.setText('Conectando...');
+
+    const identity = getClientIdentity();
+    socket.off('roomJoined');
+    socket.off('roomError');
+
+    socket.once('roomJoined', (data: { roomId: string; participants: Record<string, unknown>; isHost: boolean }) => {
+      socket.off('roomError');
+      this.closeJoinModal();
+      this.cameras.main.fadeOut(260, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('LobbyScene', { roomId: data.roomId, isHost: false, participants: data.participants });
+      });
+    });
+
+    socket.once('roomError', (err: { message: string }) => {
+      socket.off('roomJoined');
+      if (this.joinErrorText) this.joinErrorText.setText(err.message);
+    });
+
+    socket.emit('joinRoom', { roomId: code, identity });
   }
 
   private closeJoinModal() {
-    this.joinModalObjects.forEach((o) => o.destroy());
-    this.joinModalObjects = [];
-    this.joinCodeText = undefined;
-    this.joinErrorText = undefined;
+    const handler = this.data.get('_joinKeyHandler') as ((e: KeyboardEvent) => void) | undefined;
+    if (handler) window.removeEventListener('keydown', handler);
+    this.data.remove('_joinKeyHandler');
+    this.cleanupJoinModal();
   }
 
-  private openAvatarPicker(_avatarR: number) {
+  private cleanupJoinModal() {
+    this.joinModalObjects.forEach(o =>
+      (o as Phaser.GameObjects.GameObject & { destroy(): void }).destroy()
+    );
+    this.joinModalObjects = [];
+    this.joinErrorText = null;
+    if (this.joinInput) {
+      this.joinInput.remove();
+      this.joinInput = null;
+    }
+  }
+
+  // ── AVATAR PICKER ─────────────────────────────────────────────────────────────
+
+  private openAvatarPicker() {
     if (this.pickerObjects.length > 0) return;
     const { width: w, height: h } = this.scale;
-    const cx = w / 2;
-    const panelW = Math.min(w * 0.88, 430);
-    const panelH = Math.min(h * 0.72, 540);
-    const panelX = cx - panelW / 2;
-    const panelY = h / 2 - panelH / 2;
+    const layout = getLayout(w, h);
+    const cx = layout.cx;
+    const currentIdx = getSavedAvatarIndex();
 
-    const overlay = this.add.rectangle(cx, h / 2, w, h, 0x000000, 0.87)
+    const overlay = this.add.rectangle(cx, layout.cy, w, h, 0x000000, 0.84)
       .setDepth(25).setInteractive();
     overlay.on('pointerdown', () => this.closeAvatarPicker());
 
+    const panelW = Math.min(w * 0.90, 400);
+    const panelH = Math.min(h * 0.70, 510);
+    const panelTop = layout.cy - panelH / 2;
+
     const panelG = this.add.graphics().setDepth(26);
-    panelG.fillStyle(0x030e1a, 0.98);
-    panelG.fillRoundedRect(panelX, panelY, panelW, panelH, 12);
-    panelG.lineStyle(1.5, 0x5ee8ff, 0.76);
-    panelG.strokeRoundedRect(panelX, panelY, panelW, panelH, 12);
+    panelG.fillStyle(0x030e1a, 0.97);
+    panelG.fillRoundedRect(cx - panelW / 2, panelTop, panelW, panelH, 10);
+    panelG.lineStyle(1.5, 0x5ee8ff, 0.80);
+    panelG.strokeRoundedRect(cx - panelW / 2, panelTop, panelW, panelH, 10);
 
-    const header = this.add.text(cx, panelY + 26, 'ELEGÍ TU PERSONAJE', {
-      fontSize: '12px', color: '#5ee8ff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(27);
+    const headerFs = Math.round(layout.fs(13));
+    const header = this.add.text(cx, panelTop + 26, 'ELEGÍ TU PERSONAJE', {
+      fontSize: `${headerFs}px`, color: '#5ee8ff', fontStyle: 'bold',
+    }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 8).setDepth(27);
 
-    const cellSize = Math.min((panelW - 52) / 3, (panelH - 114) / 3);
-    const thumbR = Math.floor(cellSize * 0.42);
-    // Match the same overscan ratio used by the main avatar display
-    const thumbDisplaySize = thumbR * 2.85;
+    const cellSize = Math.min((panelW - 44) / 3, (panelH - 110) / 3);
+    const thumbR   = Math.floor(cellSize * 0.44);
     const gridStartX = cx - cellSize;
-    const gridStartY = panelY + 80 + cellSize / 2;
+    const gridStartY = panelTop + 72 + cellSize / 2;
 
     for (let i = 0; i < 9; i++) {
       const col = i % 3, row = Math.floor(i / 3);
       const tx = gridStartX + col * cellSize;
       const ty = gridStartY + row * cellSize;
 
-      const mG = this.add.graphics().setVisible(false).setDepth(27);
-      mG.fillStyle(0xffffff).fillCircle(tx, ty, thumbR * 0.94);
+      const borderG = this.add.graphics().setDepth(27);
+      const drawBorder = (selected: boolean, hover: boolean) => {
+        borderG.clear();
+        if (selected)        { borderG.fillStyle(0x5ee8ff, 1.0); borderG.fillCircle(tx, ty, thumbR + 4); }
+        else if (hover)      { borderG.fillStyle(0x3a7a9a, 0.75); borderG.fillCircle(tx, ty, thumbR + 4); }
+        else                 { borderG.fillStyle(0x18384e, 0.65); borderG.fillCircle(tx, ty, thumbR + 4); }
+      };
+      drawBorder(i === currentIdx, false);
+
+      this.add.circle(tx, ty, thumbR + 1, 0x030e1a, 1).setDepth(27);
+
+      const mG = this.add.graphics().setAlpha(0).setDepth(0);
+      mG.fillStyle(0xffffff).fillCircle(tx, ty, thumbR);
+      const tMask = mG.createGeometryMask();
 
       const thumb = this.add.image(tx, ty, 'avatars', String(i))
-        .setDisplaySize(thumbDisplaySize, thumbDisplaySize)
-        .setMask(mG.createGeometryMask())
-        .setDepth(28)
+        .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setMask(tMask).setDepth(28)
         .setInteractive({ useHandCursor: true });
 
-      thumb.on('pointerover', () => thumb.setTint(0xd0f8ff));
-      thumb.on('pointerout', () => thumb.clearTint());
+      if (this.textures.exists('avatar-ring')) {
+        const mini = this.add.image(tx, ty, 'avatar-ring')
+          .setDisplaySize(thumbR * 3.2, thumbR * 3.2).setDepth(29).setAlpha(0.75);
+        this.pickerObjects.push(mini);
+      }
+
       thumb.on('pointerdown', () => {
         saveAvatarIndex(i);
-        this.avatarImage
-          .setTexture('avatars', String(i))
-          .setDisplaySize(this.avatarDisplaySize, this.avatarDisplaySize);
         this.closeAvatarPicker();
+        // Rebuild layout so avatar updates
+        this.onResize({ width: this.scale.width, height: this.scale.height } as Phaser.Structs.Size);
       });
+      thumb.on('pointerover', () => { if (i !== getSavedAvatarIndex()) drawBorder(false, true); });
+      thumb.on('pointerout',  () => { if (i !== getSavedAvatarIndex()) drawBorder(false, false); });
 
-      this.pickerObjects.push(mG, thumb);
+      this.pickerObjects.push(borderG, mG, thumb);
     }
 
-    this.pickerObjects.push(overlay, panelG, header);
+    const closeBtnY = panelTop + panelH - 32;
+    const closeG = this.add.graphics().setDepth(27);
+    const drawClose = (hover: boolean) => {
+      closeG.clear();
+      closeG.fillStyle(hover ? 0x145f78 : 0x0d4d62, 0.97);
+      closeG.fillRoundedRect(cx - 80, closeBtnY - 18, 160, 36, 8);
+      closeG.lineStyle(1.5, 0x5ee8ff, 0.80);
+      closeG.strokeRoundedRect(cx - 80, closeBtnY - 18, 160, 36, 8);
+    };
+    drawClose(false);
+    const closeTxt = this.add.text(cx, closeBtnY, 'CERRAR', {
+      fontSize: `${Math.round(layout.fs(13))}px`, color: '#d4fbff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(28);
+    const closeHit = this.add.rectangle(cx, closeBtnY, 160, 36).setDepth(29).setInteractive({ useHandCursor: true });
+    closeHit.on('pointerover', () => drawClose(true));
+    closeHit.on('pointerout',  () => drawClose(false));
+    closeHit.on('pointerdown', () => this.closeAvatarPicker());
+
+    this.pickerObjects.push(overlay, panelG, header, closeG, closeTxt, closeHit);
   }
 
   private closeAvatarPicker() {
-    this.pickerObjects.forEach((o) => o.destroy());
+    this.pickerObjects.forEach(o =>
+      (o as Phaser.GameObjects.GameObject & { destroy(): void }).destroy()
+    );
     this.pickerObjects = [];
   }
 
-  private registerSocketEvents() {
-    socket.off('roomCreated');
-    socket.off('roomJoined');
-    socket.off('roomError');
+  // ── BOTTOM BAR ────────────────────────────────────────────────────────────────
 
-    socket.on('roomCreated', (data: { roomId: string; participants: Record<string, ParticipantData>; isHost: boolean }) => {
-      this.closeJoinModal();
-      this.scene.start('LobbyScene', { roomId: data.roomId, isHost: data.isHost, participants: data.participants });
-    });
-    socket.on('roomJoined', (data: { roomId: string; participants: Record<string, ParticipantData>; isHost: boolean }) => {
-      this.closeJoinModal();
-      this.scene.start('LobbyScene', { roomId: data.roomId, isHost: data.isHost, participants: data.participants });
-    });
-    socket.on('roomError', (data: { message: string }) => this.joinErrorText?.setText(data.message));
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      socket.off('roomCreated');
-      socket.off('roomJoined');
-      socket.off('roomError');
-    });
+  private createBottomBar(w: number, h: number, layout: ReturnType<typeof getLayout>) {
+    const g = this.add.graphics().setDepth(10);
+    g.lineStyle(1, 0x5ee8ff, 0.14);
+    g.lineBetween(w * 0.05, h - 38, w * 0.95, h - 38);
+    const barFs = Math.round(layout.fs(10));
+    this.add.text(w * 0.06, h - 20, 'ARENA BRAWLER 2D', {
+      fontSize: `${barFs}px`, color: '#4ac6d8',
+    }).setOrigin(0, 0.5).setDepth(11);
+    this.add.text(w - 14, h - 20, 'v0.1.0', {
+      fontSize: `${barFs}px`, color: '#3a9baf',
+    }).setOrigin(1, 0.5).setDepth(11);
   }
 
-  private emitButtonSpark(cx: number, cy: number, bw: number, bh: number) {
-    for (let i = 0; i < 10; i++) {
-      const spark = this.add.circle(
-        cx + Phaser.Math.Between(-bw / 2, bw / 2),
-        cy + Phaser.Math.Between(-bh / 2, bh / 2),
-        Phaser.Math.FloatBetween(1.6, 3.8),
-        0xbdefff,
-        1
-      ).setDepth(12).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({
-        targets: spark,
-        alpha: 0,
-        y: spark.y - Phaser.Math.Between(10, 34),
-        duration: 340,
-        onComplete: () => spark.destroy(),
-      });
-    }
+  // ── HELPERS ───────────────────────────────────────────────────────────────────
+
+  private drawDiamond(x: number, y: number, size: number, color: number, alpha = 1) {
+    const g = this.add.graphics();
+    g.fillStyle(color, alpha);
+    g.fillTriangle(x, y - size, x + size * 0.65, y, x - size * 0.65, y);
+    g.fillTriangle(x, y + size, x + size * 0.65, y, x - size * 0.65, y);
+    return g;
   }
 }

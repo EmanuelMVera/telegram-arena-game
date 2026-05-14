@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { BootScene } from "../scenes/BootScene";
 import { LoadingScene } from "../scenes/LoadingScene";
 import { MainMenuScene } from "../scenes/MainMenuScene";
-import { CreateJoinScene } from "../scenes/CreateJoinScene";
 import { LobbyScene } from "../scenes/LobbyScene";
 import { GameScene } from "../scenes/GameScene";
 import { ResultsScene } from "../scenes/ResultsScene";
@@ -13,6 +12,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   height: 1080,
   backgroundColor: "#111111",
   parent: "app",
+  dom: { createContainer: true },
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -24,5 +24,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, LoadingScene, MainMenuScene, CreateJoinScene, LobbyScene, GameScene, ResultsScene],
+  scene: [BootScene, LoadingScene, MainMenuScene, LobbyScene, GameScene, ResultsScene],
 };
