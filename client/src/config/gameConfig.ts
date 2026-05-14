@@ -9,8 +9,8 @@ import { ResultsScene } from "../scenes/ResultsScene";
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 900,
-  height: 500,
+  width: 1920,
+  height: 1080,
   backgroundColor: "#111111",
   parent: "app",
   scale: {
