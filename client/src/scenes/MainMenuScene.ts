@@ -26,6 +26,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.registerAvatarFrames();
     this.registerSocketEvents();
     this.createBackground(width, height);
+    this.createAmbientFx(width, height);
     this.createLogo(width, height);
     this.createPlayerCard(width, height);
     this.createButtons(width, height);
@@ -42,97 +43,98 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private createBackground(w: number, h: number) {
-    this.cameras.main.setBackgroundColor('#030810');
+    this.cameras.main.setBackgroundColor('#020813');
     const bg = this.add.image(w / 2, h / 2, 'bg-desktop').setDepth(-20);
     bg.setScale(Math.max(w / bg.width, h / bg.height));
-    this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.3).setDepth(-10);
+    this.add.rectangle(w / 2, h / 2, w, h, 0x020914, 0.35).setDepth(-10);
+  }
 
-    for (let i = 0; i < 28; i++) {
-      const p = this.add.circle(Phaser.Math.Between(0, w), Phaser.Math.Between(0, h), Phaser.Math.FloatBetween(1, 2.8), 0x66e8ff, Phaser.Math.FloatBetween(0.12, 0.45))
+  private createAmbientFx(w: number, h: number) {
+    for (let i = 0; i < 24; i++) {
+      const p = this.add.circle(Phaser.Math.Between(0, w), Phaser.Math.Between(0, h), Phaser.Math.FloatBetween(1, 3), 0x66e8ff, Phaser.Math.FloatBetween(0.15, 0.32))
         .setDepth(-6).setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({
         targets: p,
-        y: p.y - Phaser.Math.Between(35, 120),
-        x: p.x + Phaser.Math.Between(-18, 18),
+        y: p.y - Phaser.Math.Between(30, 110),
+        x: p.x + Phaser.Math.Between(-20, 20),
         alpha: 0,
-        duration: Phaser.Math.Between(2800, 6500),
+        duration: Phaser.Math.Between(3000, 6500),
         repeat: -1,
-        delay: Phaser.Math.Between(0, 3400),
-        onRepeat: () => p.setPosition(Phaser.Math.Between(0, w), Phaser.Math.Between(0, h)).setAlpha(Phaser.Math.FloatBetween(0.12, 0.45)),
+        delay: Phaser.Math.Between(0, 2400),
+        onRepeat: () => p.setPosition(Phaser.Math.Between(0, w), Phaser.Math.Between(h * 0.15, h)).setAlpha(Phaser.Math.FloatBetween(0.1, 0.34)),
       });
     }
   }
 
   private createLogo(w: number, h: number) {
-    const logo = this.add.image(w * 0.5, h * 0.16, 'logo').setDepth(5);
-    const maxW = Math.min(w * 0.38, 440);
-    const ratio = logo.width / logo.height;
-    logo.setDisplaySize(maxW, maxW / ratio);
-    logo.setAlpha(0.95);
+    const logo = this.add.image(w * 0.5, h * 0.17, 'logo').setDepth(5);
+    const maxW = Math.min(w * 0.34, 520);
+    logo.setDisplaySize(maxW, (maxW / logo.width) * logo.height);
+    logo.setAlpha(0.97);
   }
 
   private createPlayerCard(w: number, h: number) {
-    const cardX = w * 0.30;
-    const cardY = h * 0.53;
-    const cardW = Math.min(w * 0.34, 460);
-    const cardH = Math.min(h * 0.40, 320);
-    const avatarR = Math.max(60, Math.min(90, Math.round(h * 0.10)));
+    const cardX = w * 0.3;
+    const cardY = h * 0.57;
+    const cardW = Math.min(w * 0.36, 520);
+    const cardH = Math.min(h * 0.34, 300);
+    const avatarR = Math.max(60, Math.min(96, Math.round(h * 0.095)));
 
-    const g = this.add.graphics().setDepth(4);
-    g.fillStyle(0x020c18, 0.82);
-    g.fillRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 12);
-    g.lineStyle(1, 0x5ee8ff, 0.45);
-    g.strokeRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 12);
+    const card = this.add.graphics().setDepth(4);
+    card.fillStyle(0x030f1b, 0.84);
+    card.fillRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 16);
+    card.lineStyle(2, 0x5ee8ff, 0.36);
+    card.strokeRoundedRect(cardX - cardW / 2, cardY - cardH / 2, cardW, cardH, 16);
 
-    const avatarX = cardX;
-    const avatarY = cardY - 30;
-    const ringSize = avatarR * 2.5;
-    const maskGraphics = this.add.graphics().setVisible(false);
-    maskGraphics.fillStyle(0xffffff, 1).fillCircle(avatarX, avatarY, ringSize * 0.39);
+    const avatarX = cardX - cardW * 0.22;
+    const avatarY = cardY - 6;
+    const ringSize = avatarR * 2.45;
 
-    this.avatarImage = this.add.image(avatarX, avatarY, 'avatars', String(getSavedAvatarIndex())).setDepth(6).setDisplaySize(ringSize * 0.98, ringSize * 0.98);
-    this.avatarImage.setMask(maskGraphics.createGeometryMask());
+    const avatarMaskG = this.add.graphics().setVisible(false);
+    avatarMaskG.fillStyle(0xffffff, 1).fillCircle(avatarX, avatarY, ringSize * 0.4);
 
-    const ring = this.add.image(avatarX, avatarY, 'avatar-ring').setDepth(7).setDisplaySize(ringSize, ringSize);
-    this.tweens.add({ targets: ring, alpha: { from: 0.85, to: 1 }, duration: 2200, yoyo: true, repeat: -1 });
+    this.avatarImage = this.add.image(avatarX, avatarY, 'avatars', String(getSavedAvatarIndex())).setDepth(6).setDisplaySize(ringSize * 0.96, ringSize * 0.96);
+    this.avatarImage.setMask(avatarMaskG.createGeometryMask());
 
-    const editAvatar = this.add.text(avatarX + ringSize * 0.35, avatarY + ringSize * 0.30, '✎', {
-      fontSize: '18px', color: '#d6fbff', backgroundColor: '#103344', padding: { x: 5, y: 2 },
-    }).setOrigin(0.5).setDepth(9).setInteractive({ useHandCursor: true });
-    editAvatar.on('pointerdown', () => this.openAvatarPicker(avatarR));
+    const ring = this.add.image(avatarX, avatarY, 'avatar-ring').setDepth(8).setDisplaySize(ringSize, ringSize);
+    this.tweens.add({ targets: ring, alpha: { from: 0.84, to: 1 }, duration: 1900, yoyo: true, repeat: -1 });
 
-    const aliasY = cardY + avatarR + 6;
-    this.aliasText = this.add.text(avatarX, aliasY, `${getPlayerDisplayName()}  ✎`, {
-      fontSize: '24px', color: '#e8feff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(7).setInteractive({ useHandCursor: true });
+    const avatarEdit = this.add.text(avatarX + ringSize * 0.34, avatarY + ringSize * 0.30, '✎', {
+      fontSize: '18px', color: '#d7fbff', backgroundColor: '#12374a', padding: { x: 6, y: 2 },
+    }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
+    avatarEdit.on('pointerdown', () => this.openAvatarPicker(avatarR));
+
+    this.aliasText = this.add.text(cardX + cardW * 0.07, avatarY + 8, `${getPlayerDisplayName()} ✎`, {
+      fontSize: '30px', color: '#e9feff', fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setDepth(7).setInteractive({ useHandCursor: true });
     this.aliasText.on('pointerdown', () => {
       const next = window.prompt('Alias de juego', getPlayerDisplayName());
       if (next === null) return;
       savePlayerAlias(next);
-      this.aliasText.setText(`${getPlayerDisplayName()}  ✎`);
+      this.aliasText.setText(`${getPlayerDisplayName()} ✎`);
     });
   }
 
   private createButtons(w: number, h: number) {
-    const cx = w * 0.72;
-    const baseY = h * 0.47;
-    const btnW = Math.min(w * 0.31, 400);
-    const btnH = Math.min(h * 0.15, 118);
+    const cx = w * 0.73;
+    const baseY = h * 0.49;
+    const btnW = Math.min(w * 0.31, 410);
+    const btnH = Math.min(h * 0.15, 120);
 
     const makeBtn = (key: string, y: number, action: () => void) => {
       const btn = this.add.image(cx, y, key).setDepth(8).setDisplaySize(btnW, btnH).setInteractive({ useHandCursor: true });
-      const glow = this.add.rectangle(cx, y, btnW + 24, btnH + 20, 0x44ccff, 0).setDepth(7).setBlendMode(Phaser.BlendModes.ADD);
-      const shimmer = this.add.rectangle(cx - btnW / 2, y, 18, btnH * 0.72, 0xd8ffff, 0).setDepth(9).setBlendMode(Phaser.BlendModes.ADD);
+      const glow = this.add.rectangle(cx, y, btnW + 26, btnH + 22, 0x52d7ff, 0).setDepth(7).setBlendMode(Phaser.BlendModes.ADD);
+      const shimmer = this.add.rectangle(cx - btnW / 2, y, 20, btnH * 0.76, 0xe7ffff, 0).setDepth(9).setBlendMode(Phaser.BlendModes.ADD);
 
       btn.on('pointerover', () => {
-        btn.setTint(0xc9f7ff);
-        this.tweens.add({ targets: glow, alpha: 0.3, duration: 150 });
-        shimmer.setAlpha(0.55).setX(cx - btnW / 2 - 12);
-        this.tweens.add({ targets: shimmer, x: cx + btnW / 2 + 12, alpha: 0, duration: 380 });
+        btn.setTint(0xcdf8ff);
+        this.tweens.add({ targets: glow, alpha: 0.32, duration: 140 });
+        shimmer.setAlpha(0.55).setX(cx - btnW / 2 - 14);
+        this.tweens.add({ targets: shimmer, x: cx + btnW / 2 + 14, alpha: 0, duration: 390 });
       });
       btn.on('pointerout', () => { btn.clearTint(); this.tweens.add({ targets: glow, alpha: 0, duration: 180 }); });
       btn.on('pointerdown', () => {
-        this.tweens.add({ targets: btn, scaleX: 0.96, scaleY: 0.96, duration: 70, yoyo: true });
+        this.tweens.add({ targets: btn, scaleX: 0.96, scaleY: 0.96, duration: 80, yoyo: true });
         this.emitButtonSpark(cx, y, btnW, btnH);
         action();
       });
@@ -146,13 +148,13 @@ export class MainMenuScene extends Phaser.Scene {
     if (this.joinModalObjects.length > 0) return;
     const { width: w, height: h } = this.scale;
     let code = '';
+    const panelW = Math.min(w * 0.4, 520);
 
     const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.72).setDepth(30).setInteractive();
-    const panel = this.add.rectangle(w / 2, h / 2, Math.min(w * 0.42, 520), Math.min(h * 0.52, 360), 0x031120, 0.96)
-      .setDepth(31).setStrokeStyle(2, 0x5ee8ff, 0.78);
+    const panel = this.add.rectangle(w / 2, h / 2, panelW, Math.min(h * 0.52, 360), 0x031120, 0.97).setDepth(31).setStrokeStyle(2, 0x5ee8ff, 0.78);
     const title = this.add.text(w / 2, h * 0.37, 'UNIRSE A PARTIDA', { fontSize: '26px', color: '#c6f7ff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(32);
 
-    const inputBg = this.add.rectangle(w / 2, h * 0.48, 280, 54, 0x061a2a, 1).setDepth(32).setStrokeStyle(1, 0x5ee8ff, 0.8).setInteractive({ useHandCursor: true });
+    const inputBg = this.add.rectangle(w / 2, h * 0.48, Math.min(panelW * 0.68, 300), 56, 0x061a2a, 1).setDepth(32).setStrokeStyle(1, 0x5ee8ff, 0.85).setInteractive({ useHandCursor: true });
     this.joinCodeText = this.add.text(w / 2, h * 0.48, '______', { fontSize: '30px', color: '#90ecff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(33);
     this.joinErrorText = this.add.text(w / 2, h * 0.56, '', { fontSize: '16px', color: '#ff9ba8' }).setOrigin(0.5).setDepth(33);
 
@@ -189,7 +191,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.joinErrorText = undefined;
   }
 
-  private openAvatarPicker(avatarR: number) { /* unchanged feature */
+  private openAvatarPicker(avatarR: number) {
     if (this.pickerObjects.length > 0) return;
     const { width: w, height: h } = this.scale;
     const cx = w / 2;
