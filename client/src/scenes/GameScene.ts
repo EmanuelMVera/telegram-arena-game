@@ -86,6 +86,10 @@ export class GameScene extends Phaser.Scene {
       backgroundColor: 'rgba(2,8,17,0.75)', padding: { x: 10, y: 5 },
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100);
 
+    this.scale.on('resize', (size: Phaser.Structs.Size) => {
+      this.timerText?.setX(size.width / 2);
+    }, this);
+
     this.registerSocketEvents();
     this.joinGameOnce();
   }
@@ -648,6 +652,7 @@ export class GameScene extends Phaser.Scene {
 
   private cleanupScene() {
     disableGameplayLayout();
+    this.scale.off('resize');
     ['localPlayer','currentPlayers','playerJoined','playerMoved','playersUpdated',
       'attackVisual','hitVisual','playerKilled','duplicateConnection','playerLeft','timerUpdate','gameOver']
       .forEach((e) => socket.off(e));

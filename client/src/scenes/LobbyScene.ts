@@ -20,6 +20,9 @@ export class LobbyScene extends Phaser.Scene {
   // Stable layout ref for parallax tween
   private bg!: Phaser.GameObjects.Image;
 
+  // Debounce handle for resize rebuilds
+  private _rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() { super('LobbyScene'); }
 
   create() {
@@ -37,6 +40,7 @@ export class LobbyScene extends Phaser.Scene {
 
     this.scale.on('resize', this.onResize, this);
     this.events.once('shutdown', () => {
+      if (this._rebuildTimer !== null) { clearTimeout(this._rebuildTimer); this._rebuildTimer = null; }
       this.scale.off('resize', this.onResize, this);
       socket.off('participantsUpdated');
       socket.off('gameStart');
@@ -45,13 +49,18 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   private onResize(_size: Phaser.Structs.Size) {
-    this.children.removeAll(true);
-    this.tweens.killAll();
-    this.participantRows = [];
-    this.readyBtnTxt = undefined as unknown as Phaser.GameObjects.Text;
-    this.startBtnG = null;
-    this.startBtnTxt = null;
-    this.buildLayout();
+    if (this._rebuildTimer !== null) clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = window.setTimeout(() => {
+      this._rebuildTimer = null;
+      if (!this.scene.isActive()) return;
+      this.tweens.killAll();
+      this.children.removeAll(true);
+      this.participantRows = [];
+      this.readyBtnTxt = undefined as unknown as Phaser.GameObjects.Text;
+      this.startBtnG = null;
+      this.startBtnTxt = null;
+      this.buildLayout();
+    }, 150);
   }
 
   // ── FULL LAYOUT ───────────────────────────────────────────────────────────────
@@ -311,14 +320,14 @@ export class LobbyScene extends Phaser.Scene {
 
     if (this.startBtnG && this.startBtnTxt) {
       const enabled = this.canStart();
-      // Redraw the start button graphics with correct color
       const { width: w, height: h } = this.scale;
-      const layout = getLayout(w, h);
-      const landscape = !layout.isPortrait;
-      const btnW   = Math.min(landscape ? w * 0.48 : w * 0.78, 380);
-      const btnH   = Math.max(40, Math.round(layout.fs(16) * 2.4));
+      const layout   = getLayout(w, h);
+      const landscape = layout.isLandscape;
+      // Match exactly the same formula used in buildLandscapeLayout / buildPortraitLayout
+      const btnW  = landscape ? Math.min(w * 0.48, 340) : Math.min(w * 0.88, 430);
+      const btnH  = Math.max(40, Math.round(layout.fs(16) * 2.4));
       const startY = landscape ? h * 0.52 : h * 0.80;
-      const cx     = landscape ? w * 0.72 : w / 2;
+      const cx     = landscape ? w * 0.72 : layout.cx;
       this.startBtnG.clear();
       this.startBtnG.fillStyle(enabled ? 0x0d4d62 : 0x0a1a24, 0.97);
       this.startBtnG.fillRoundedRect(cx - btnW / 2, startY - btnH / 2, btnW, btnH, 8);

@@ -5,25 +5,49 @@ import { getLayout, applyBgCover } from '../utils/layout';
 type RankEntry = { id: string; name: string; kills: number; deaths: number };
 
 export class ResultsScene extends Phaser.Scene {
+  private ranking: RankEntry[] = [];
+  private myId = '';
+  private _rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() { super('ResultsScene'); }
 
   create() {
     const data = this.scene.settings.data as { ranking?: RankEntry[] } | null;
-    const ranking = data?.ranking ?? [];
+    this.ranking = data?.ranking ?? [];
+    this.myId = getClientIdentity().id;
+
+    this.buildLayout();
+
+    this.scale.on('resize', this.onResize, this);
+    this.events.once('shutdown', () => {
+      if (this._rebuildTimer !== null) { clearTimeout(this._rebuildTimer); this._rebuildTimer = null; }
+      this.scale.off('resize', this.onResize, this);
+    });
+  }
+
+  private onResize(_size: Phaser.Structs.Size) {
+    if (this._rebuildTimer !== null) clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = window.setTimeout(() => {
+      this._rebuildTimer = null;
+      if (!this.scene.isActive()) return;
+      this.tweens.killAll();
+      this.children.removeAll(true);
+      this.buildLayout();
+    }, 150);
+  }
+
+  private buildLayout() {
     const { width: w, height: h } = this.scale;
     const layout = getLayout(w, h);
-    const myId = getClientIdentity().id;
-
-    this.createBackground(w, h);
-    this.createHeader(w, h, ranking, layout);
-    this.createRankingTable(w, h, ranking, myId, layout);
+    this.createBackground(w, h, layout);
+    this.createHeader(w, h, layout);
+    this.createRankingTable(w, h, layout);
     this.createButtons(w, h, layout);
   }
 
-  private createBackground(w: number, h: number) {
+  private createBackground(w: number, h: number, layout: ReturnType<typeof getLayout>) {
     this.cameras.main.setBackgroundColor('#050c14');
-    const { bgKey } = getLayout(w, h);
-    const bg = this.add.image(w / 2, h / 2, bgKey).setDepth(-20);
+    const bg = this.add.image(w / 2, h / 2, layout.bgKey).setDepth(-20);
     applyBgCover(bg, w, h);
     this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.72).setDepth(-10);
     this.tweens.add({ targets: bg, scale: bg.scale * 1.02, duration: 10000, yoyo: true, repeat: -1 });
@@ -40,12 +64,7 @@ export class ResultsScene extends Phaser.Scene {
     g.lineBetween(w - m, h - m, w - m - s, h - m); g.lineBetween(w - m, h - m, w - m, h - m - s);
   }
 
-  private createHeader(
-    w: number,
-    h: number,
-    ranking: RankEntry[],
-    layout: ReturnType<typeof getLayout>,
-  ) {
+  private createHeader(w: number, h: number, layout: ReturnType<typeof getLayout>) {
     const cx = layout.cx;
 
     this.add.text(cx, h * 0.065, 'FIN DE PARTIDA', {
@@ -56,8 +75,8 @@ export class ResultsScene extends Phaser.Scene {
       fontSize: `${Math.round(layout.fs(32))}px`, color: '#dff8ff', fontStyle: 'bold',
     }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 14).setDepth(3);
 
-    if (ranking.length > 0) {
-      this.add.text(cx, h * 0.20, `GANADOR: ${ranking[0].name}`, {
+    if (this.ranking.length > 0) {
+      this.add.text(cx, h * 0.20, `GANADOR: ${this.ranking[0].name}`, {
         fontSize: `${Math.round(layout.fs(13))}px`, color: '#5ee8b0', fontStyle: 'bold',
         backgroundColor: 'rgba(0,40,20,0.6)', padding: { x: 12, y: 4 },
       }).setOrigin(0.5).setDepth(3);
@@ -69,13 +88,7 @@ export class ResultsScene extends Phaser.Scene {
     g.lineBetween(cx - sepW / 2, h * 0.255, cx + sepW / 2, h * 0.255);
   }
 
-  private createRankingTable(
-    w: number,
-    h: number,
-    ranking: RankEntry[],
-    myId: string,
-    layout: ReturnType<typeof getLayout>,
-  ) {
+  private createRankingTable(w: number, h: number, layout: ReturnType<typeof getLayout>) {
     const cx = layout.cx;
     const panelW = Math.min(w * 0.88, 480);
     const startY = h * 0.285;
@@ -84,12 +97,12 @@ export class ResultsScene extends Phaser.Scene {
 
     const posColors = ['#d4a017', '#a0a0a0', '#b87333', '#4a7a8a'];
 
-    ranking.forEach((entry, i) => {
-      const isMe = entry.id === myId;
+    this.ranking.forEach((entry, i) => {
+      const isMe     = entry.id === this.myId;
       const isWinner = i === 0;
       const rowY = startY + i * (rowH + rowGap) + rowH / 2;
 
-      const fillColor = isWinner ? 0x0a2e14 : (isMe ? 0x081828 : 0x030c18);
+      const fillColor   = isWinner ? 0x0a2e14 : (isMe ? 0x081828 : 0x030c18);
       const borderColor = isWinner ? 0x5ee8b0 : (isMe ? 0x5ee8ff : 0x1a4458);
       this.add.rectangle(cx, rowY, panelW - 16, rowH, fillColor, 0.92)
         .setStrokeStyle(1, borderColor, (isWinner || isMe) ? 0.85 : 0.4).setDepth(4);
@@ -103,7 +116,7 @@ export class ResultsScene extends Phaser.Scene {
         fontSize: `${posFs}px`, color: posColors[i] ?? '#3a6070', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(5);
 
-      const nameColor = isWinner ? '#8effcc' : (isMe ? '#c8f8ff' : '#7aadc0');
+      const nameColor  = isWinner ? '#8effcc' : (isMe ? '#c8f8ff' : '#7aadc0');
       const displayName = entry.name + (isMe ? ' (tú)' : '');
       this.add.text(cx - panelW / 2 + 50, rowY, displayName, {
         fontSize: `${nameFs}px`, color: nameColor, fontStyle: isWinner ? 'bold' : 'normal',
@@ -125,8 +138,8 @@ export class ResultsScene extends Phaser.Scene {
       }).setOrigin(0.5, 0).setDepth(5);
     });
 
-    if (ranking.length === 0) {
-      this.add.text(layout.cx, h * 0.5, 'Sin resultados disponibles', {
+    if (this.ranking.length === 0) {
+      this.add.text(cx, h * 0.5, 'Sin resultados disponibles', {
         fontSize: `${Math.round(layout.fs(13))}px`, color: '#3a7a8a',
       }).setOrigin(0.5).setDepth(5);
     }

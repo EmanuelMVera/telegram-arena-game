@@ -16,6 +16,9 @@ export class MainMenuScene extends Phaser.Scene {
   private joinInput: HTMLInputElement | null = null;
   private joinErrorText: Phaser.GameObjects.Text | null = null;
 
+  // Debounce handle for resize rebuilds
+  private _rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() { super('MainMenuScene'); }
 
   create() {
@@ -23,8 +26,9 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.scale.on('resize', this.onResize, this);
     this.events.once('shutdown', () => {
+      if (this._rebuildTimer !== null) { clearTimeout(this._rebuildTimer); this._rebuildTimer = null; }
       this.scale.off('resize', this.onResize, this);
-      this.cleanupJoinModal();
+      this.closeJoinModal();   // removes keyboard handler + input + phaser objects
       socket.off('roomCreated');
       socket.off('roomJoined');
       socket.off('roomError');
@@ -32,11 +36,17 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private onResize(_size: Phaser.Structs.Size) {
-    this.children.removeAll(true);
-    this.tweens.killAll();
-    this.aliasText = undefined as unknown as Phaser.GameObjects.Text;
-    this.cleanupJoinModal();
-    this.buildLayout();
+    // Debounce: wait until resize events stop firing (device rotation fires many).
+    if (this._rebuildTimer !== null) clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = window.setTimeout(() => {
+      this._rebuildTimer = null;
+      if (!this.scene.isActive()) return;
+      this.tweens.killAll();
+      this.children.removeAll(true);
+      this.aliasText = undefined as unknown as Phaser.GameObjects.Text;
+      this.closeJoinModal();
+      this.buildLayout();
+    }, 150);
   }
 
   // ── FULL LAYOUT BUILD ─────────────────────────────────────────────────────────
@@ -133,20 +143,25 @@ export class MainMenuScene extends Phaser.Scene {
   private buildPortraitLayout(w: number, h: number, layout: ReturnType<typeof getLayout>) {
     const cx = layout.cx;
 
-    // Logo
-    this.createLogoSection(cx, h * 0.075, w, layout);
+    // Logo — sits in top 10% of screen
+    const logoY = h * 0.082;
+    this.createLogoSection(cx, logoY, w, layout);
 
-    // Avatar card — centred, takes ~20% of height
-    const avatarR = clamp(Math.round(Math.min(w * 0.115, h * 0.085)), 38, 70);
-    const avatarCy = h * 0.285;
+    // Avatar — size proportional to screen, but more conservative on short screens
+    const avatarR = clamp(Math.round(Math.min(w * 0.105, h * 0.075, 62)), 32, 62);
+    // Pin avatar below the logo separator with a fixed gap
+    const logoSepY = logoY + layout.shortSide * 0.085;
+    const avatarCy = Math.max(logoSepY + avatarR + layout.pad * 1.5, h * 0.26);
     this.createAvatarCard(cx, avatarCy, avatarR, w, h, layout);
 
-    // Name / alias
-    const nameY = avatarCy + avatarR + layout.pad * 2.2 + 20;
+    // Name / alias — always below avatar with proportional gap
+    const nameGap = Math.max(layout.pad * 1.8, 14);
+    const nameY   = avatarCy + avatarR + nameGap;
     this.createNameSection(cx, nameY, avatarR, layout);
 
-    // Buttons centred
-    const btnTopY = nameY + layout.fs(24) + layout.pad * 4;
+    // Buttons — below name section (name + edit button)
+    const nameSectionH = layout.fs(22) + layout.pad * 3.5 + Math.max(26, Math.round(layout.fs(14) * 2));
+    const btnTopY = nameY + nameSectionH;
     this.createButtons(cx, btnTopY, Math.min(w * 0.86, 420), layout);
   }
 

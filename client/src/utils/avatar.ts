@@ -37,7 +37,7 @@ export function buildAvatar(
 ): { objects: Phaser.GameObjects.GameObject[]; setDepth: (d: number) => void } {
   const objects: Phaser.GameObjects.GameObject[] = [];
 
-  // Circular geometry mask
+  // Circular geometry mask (setAlpha(0) keeps it invisible but still renders for masking)
   const maskG = scene.add.graphics().setAlpha(0);
   maskG.fillStyle(0xffffff).fillCircle(x, y, r);
   const mask = maskG.createGeometryMask();
@@ -57,19 +57,24 @@ export function buildAvatar(
   objects.push(txt);
 
   // Photo overlay (replaces initials when loaded)
-  let photoImg: Phaser.GameObjects.Image | null = null;
+  let photoApplied = false;
 
   if (identity.photoUrl) {
     const photoKey = `tg-photo-${identity.id}`;
 
     const applyPhoto = () => {
-      if (!scene.textures.exists(photoKey) || !scene.scene.isActive()) return;
-      if (photoImg) return; // already applied
-      photoImg = scene.add.image(x, y, photoKey)
+      // Guard: only apply once, and only if the scene and mask objects are still alive
+      if (photoApplied) return;
+      if (!scene.scene.isActive()) return;
+      if (!scene.textures.exists(photoKey)) return;
+      if (!maskG.active) return;  // mask was destroyed by a later rebuild
+      photoApplied = true;
+
+      const photo = scene.add.image(x, y, photoKey)
         .setDisplaySize(r * 2, r * 2)
         .setMask(mask)
         .setDepth(depth + 0.2);
-      objects.push(photoImg);
+      objects.push(photo);
       bgG.setVisible(false);
       txt.setVisible(false);
     };
@@ -89,7 +94,9 @@ export function buildAvatar(
   const setDepth = (d: number) => {
     bgG.setDepth(d);
     txt.setDepth(d + 0.1);
-    photoImg?.setDepth(d + 0.2);
+    // photo depth is set at creation time; update it if already created
+    const photo = objects.find(o => o instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined;
+    photo?.setDepth(d + 0.2);
   };
 
   return { objects, setDepth };
