@@ -47,11 +47,13 @@ export class LoadingScene extends Phaser.Scene {
     });
 
     // Load remaining assets
-    this.load.image('bg-desktop', '/assets/main-menu/background-desktop.png');
+    this.load.image('bg-desktop', '/assets/background/BG_Desktop.png');
     this.load.image('bg-mobile',  '/assets/main-menu/background-mobile.png');
     this.load.image('btn-create', '/assets/main-menu/button_create.png');
-    this.load.image('btn-join',   '/assets/main-menu/botton-join.png');
+    this.load.image('btn-join',   '/assets/main-menu/button-join.png');
     this.load.image('avatar-ring','/assets/main-menu/avatar_ring.png');
+    this.load.image('logo', '/assets/logo/logo.png');
+    this.load.image('avatars', '/assets/avatars/avatars.png');
     
     // Listen for resize events to reposition elements
     this.scale.on('resize', this.handleResize, this);
