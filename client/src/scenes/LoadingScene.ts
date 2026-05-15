@@ -61,6 +61,18 @@ export class LoadingScene extends Phaser.Scene {
     this.load.image('avatar-ring','/assets/main-menu/avatar_ring.png');
     // logo is already loaded in BootScene as 'logo'
 
+    // ── Warrior character sprites ──────────────────────────────────────────────
+    this.load.spritesheet('warrior-idle', '/assets/characters/warrior/idle.webp', {
+      frameWidth: 1254, frameHeight: 1254,
+    });
+    this.load.image('warrior-run',    '/assets/characters/warrior/run.png');
+    this.load.image('warrior-jump',   '/assets/characters/warrior/jump.png');
+    this.load.image('warrior-fall',   '/assets/characters/warrior/fall.png');
+    this.load.image('warrior-attack', '/assets/characters/warrior/attack-1.png');
+    this.load.image('warrior-hurt',   '/assets/characters/warrior/hurt.png');
+    this.load.image('warrior-death',  '/assets/characters/warrior/death.png');
+    this.load.image('warrior-parry',  '/assets/characters/warrior/parry.png');
+
     // Resize listener
     this.scale.on('resize', this.onResize, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.onResize, this));
