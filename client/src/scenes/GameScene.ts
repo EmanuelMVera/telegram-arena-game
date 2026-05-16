@@ -121,10 +121,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (attackPressed && !this.wasAttackPressed && time - this.lastLocalAttackTime >= this.localAttackCooldown) {
-      this.showAttackEffect(this.localPlayer.x, this.localPlayer.y, this.currentDirection);
-      this.localPlayer.playAttack();
-      socket.emit('playerAttack');
-      this.lastLocalAttackTime = time;
+      const dir = this.currentDirection;
+      const attacked = this.localPlayer.playAttack(() => {
+        this.showAttackEffect(this.localPlayer.x, this.localPlayer.y, dir);
+        socket.emit('playerAttack');
+      });
+      if (attacked) this.lastLocalAttackTime = time;
     }
     this.wasAttackPressed = attackPressed;
 
@@ -140,27 +142,46 @@ export class GameScene extends Phaser.Scene {
   // ── ANIMATIONS ───────────────────────────────────────────────────────────────
 
   private createAnimations() {
-    if (this.anims.exists('warrior-idle')) return;
+    if (this.anims.exists('man-idle')) return;
 
+    // Attack: 7 frames at 14 fps, plays once
     this.anims.create({
-      key: 'warrior-idle',
-      frames: this.anims.generateFrameNumbers('warrior-idle', { start: 0, end: 5 }),
-      frameRate: 8, repeat: -1,
+      key: 'man-attack',
+      frames: this.anims.generateFrameNumbers('man-attack', { start: 0, end: 6 }),
+      frameRate: 14, repeat: 0,
     });
 
-    const singles: string[] = ['warrior-run', 'warrior-jump', 'warrior-fall',
-                                'warrior-attack', 'warrior-hurt', 'warrior-death', 'warrior-parry'];
-    singles.forEach((key) => {
+    // Jump phases: all from the 11-frame spritesheet
+    this.anims.create({
+      key: 'man-jump-start',
+      frames: this.anims.generateFrameNumbers('man-jump', { start: 0, end: 5 }),
+      frameRate: 14, repeat: 0,
+    });
+    this.anims.create({
+      key: 'man-jump-air',
+      frames: this.anims.generateFrameNumbers('man-jump', { start: 6, end: 6 }),
+      frameRate: 1, repeat: -1,
+    });
+    this.anims.create({
+      key: 'man-jump-preland',
+      frames: this.anims.generateFrameNumbers('man-jump', { start: 7, end: 7 }),
+      frameRate: 1, repeat: -1,
+    });
+    this.anims.create({
+      key: 'man-jump-land',
+      frames: this.anims.generateFrameNumbers('man-jump', { start: 8, end: 10 }),
+      frameRate: 12, repeat: 0,
+    });
+
+    // Single-frame static images
+    const loops: string[] = ['man-idle', 'man-run', 'man-fall'];
+    loops.forEach((key) => {
+      this.anims.create({ key, frames: [{ key }], frameRate: 1, repeat: -1 });
+    });
+    const once: string[] = ['man-hurt', 'man-death', 'man-parry'];
+    once.forEach((key) => {
       this.anims.create({ key, frames: [{ key }], frameRate: 1, repeat: 0 });
     });
-
-    // Run loops
-    this.anims.remove('warrior-run');
-    this.anims.create({ key: 'warrior-run', frames: [{ key: 'warrior-run' }], frameRate: 1, repeat: -1 });
-    this.anims.remove('warrior-jump');
-    this.anims.create({ key: 'warrior-jump', frames: [{ key: 'warrior-jump' }], frameRate: 1, repeat: -1 });
-    this.anims.remove('warrior-fall');
-    this.anims.create({ key: 'warrior-fall', frames: [{ key: 'warrior-fall' }], frameRate: 1, repeat: -1 });
   }
 
   // ── WORLD ────────────────────────────────────────────────────────────────────
@@ -419,13 +440,14 @@ export class GameScene extends Phaser.Scene {
 
     socket.on('playerMoved', (data: { id: string; x: number; y: number; direction: Direction }) => {
       const current = this.playerData[data.id];
+      const isMoving = !current || Math.abs(current.x - data.x) > 1;
       if (current) Object.assign(current, data);
       const remote = this.otherPlayers[data.id];
       if (remote) {
         remote.setPosition(data.x, data.y);
         remote.setDirection(data.direction);
-        remote.updateAnimation(true, data.direction === 'left' ? -1 : 1, 0);
-        remote.updateUi(this.playerData[data.id]?.name ?? 'Player', this.playerData[data.id]?.hp ?? 100);
+        remote.updateAnimation(true, isMoving ? (data.direction === 'left' ? -100 : 100) : 0, 0);
+        remote.updateUi(current?.name ?? 'Player', current?.hp ?? 100);
       }
     });
 

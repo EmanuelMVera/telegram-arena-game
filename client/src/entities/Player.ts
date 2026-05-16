@@ -8,14 +8,16 @@ export interface PlayerConfig {
   depth?: number;
 }
 
-// Display size of the warrior sprite on screen (sprites are 1254×1254 source)
 const DISPLAY_SIZE = 80;
-// Physics body size (smaller than display to avoid floating / wall-clipping)
 const BODY_W = 44;
 const BODY_H = 60;
-// Body offset to center the hitbox within the displayed sprite
 const BODY_OFF_X = (DISPLAY_SIZE - BODY_W) / 2;
 const BODY_OFF_Y = (DISPLAY_SIZE - BODY_H) / 2 + 4;
+
+// Frame 4 (index 3) at 14 fps = 3 × (1000 / 14) ≈ 214 ms
+const ATTACK_HIT_DELAY = Math.round(3 * 1000 / 14);
+
+type JumpPhase = 'none' | 'start' | 'air_up' | 'air_down' | 'land';
 
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
@@ -26,6 +28,10 @@ export class Player {
   readonly isLocal: boolean;
   private tintColor: number;
 
+  private jumpPhase: JumpPhase = 'none';
+  private wasGrounded = true;
+  private isAttacking = false;
+
   constructor(scene: Phaser.Scene, x: number, y: number, config: PlayerConfig) {
     this.scene   = scene;
     this.isLocal = config.isLocal;
@@ -33,28 +39,24 @@ export class Player {
 
     const depth = config.depth ?? (config.isLocal ? 6 : 5);
 
-    // Physics sprite — used by both local (active physics) and remote (position-only)
-    this.sprite = scene.physics.add.sprite(x, y, 'warrior-idle')
+    this.sprite = scene.physics.add.sprite(x, y, 'man-idle')
       .setDisplaySize(DISPLAY_SIZE, DISPLAY_SIZE)
       .setDepth(depth)
-      .play('warrior-idle');
+      .play('man-idle');
 
     if (config.isLocal) {
       this.sprite
         .setCollideWorldBounds(true)
         .setBounce(0.05)
         .setMaxVelocity(280, 850);
-      // No tint for local — GameScene will apply server-assigned color
     } else {
       this.sprite.setTint(this.tintColor);
-      // Disable physics for remote players; position is set directly from server
       (this.sprite.body as Phaser.Physics.Arcade.Body).setEnable(false);
     }
 
     this.sprite.setBodySize(BODY_W, BODY_H);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setOffset(BODY_OFF_X, BODY_OFF_Y);
 
-    // Soul glow halo (local player only)
     if (config.isLocal) {
       this.glow = scene.add.circle(x, y, 28, 0x5ee8ff, 0.07).setDepth(depth - 1);
       scene.tweens.add({
@@ -64,18 +66,16 @@ export class Player {
       });
     }
 
-    // Name label
     this.nameText = scene.add.text(x, y - 54, config.name, {
       fontSize: '12px', color: '#e9feff',
       backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 4, y: 2 },
     }).setOrigin(0.5).setDepth(40);
 
-    // HP bar
     this.hpBar = scene.add.graphics().setDepth(39);
     this.drawHp(100);
   }
 
-  // ── Position ─────────────────────────────────────────────────────────────────
+  // ── Position ──────────────────────────────────────────────────────────────────
 
   get x() { return this.sprite.x; }
   get y() { return this.sprite.y; }
@@ -84,41 +84,96 @@ export class Player {
     this.sprite.setPosition(x, y);
   }
 
-  // ── Direction ────────────────────────────────────────────────────────────────
+  // ── Direction ─────────────────────────────────────────────────────────────────
 
   setDirection(dir: Direction) {
     this.sprite.setFlipX(dir === 'left');
   }
 
-  // ── Animation ────────────────────────────────────────────────────────────────
+  // ── Jump state machine ────────────────────────────────────────────────────────
 
   updateAnimation(isGrounded: boolean, velX: number, velY: number) {
-    if (!isGrounded) {
-      const key = velY > 80 ? 'warrior-fall' : 'warrior-jump';
-      this.sprite.play(key, true);
-    } else if (Math.abs(velX) > 30) {
-      this.sprite.play('warrior-run', true);
-    } else {
-      this.sprite.play('warrior-idle', true);
+    const justLanded     = !this.wasGrounded && isGrounded;
+    const justLeftGround = this.wasGrounded  && !isGrounded;
+
+    // Landing
+    if (justLanded && this.jumpPhase !== 'none' && this.jumpPhase !== 'land') {
+      this.jumpPhase = 'land';
+      if (!this.isAttacking) {
+        this.sprite.play('man-jump-land', true);
+        this.sprite.once('animationcomplete-man-jump-land', () => {
+          this.jumpPhase = 'none';
+        });
+      }
+
+    // Left the ground
+    } else if (justLeftGround && this.jumpPhase === 'none') {
+      this.jumpPhase = 'start';
+      if (!this.isAttacking) {
+        this.sprite.play('man-jump-start', true);
+        this.sprite.once('animationcomplete-man-jump-start', () => {
+          if (this.jumpPhase === 'start') {
+            this.jumpPhase = 'air_up';
+            this.sprite.play('man-jump-air', true);
+          }
+        });
+      }
+
+    // In-air sub-phases (skip during attack or while start/land anims play)
+    } else if (!isGrounded && !this.isAttacking
+               && this.jumpPhase !== 'start' && this.jumpPhase !== 'land') {
+      if (velY > 80 && this.jumpPhase !== 'air_down') {
+        this.jumpPhase = 'air_down';
+        this.sprite.play('man-jump-preland', true);
+      } else if (velY <= 80 && this.jumpPhase !== 'air_up') {
+        this.jumpPhase = 'air_up';
+        this.sprite.play('man-jump-air', true);
+      }
+
+    // Ground locomotion
+    } else if (isGrounded && this.jumpPhase === 'none' && !this.isAttacking) {
+      if (Math.abs(velX) > 30) {
+        this.sprite.play('man-run', true);
+      } else {
+        this.sprite.play('man-idle', true);
+      }
     }
+
+    this.wasGrounded = isGrounded;
   }
 
-  playAttack() {
-    this.sprite.play('warrior-attack', true);
-    // Return to idle after the attack frame
-    this.scene.time.delayedCall(180, () => {
-      if (this.sprite.active) this.sprite.play('warrior-idle', true);
+  // ── Attack ────────────────────────────────────────────────────────────────────
+
+  /** Returns false if already attacking (caller can skip cooldown reset). */
+  playAttack(onHitFrame?: () => void): boolean {
+    if (this.isAttacking) return false;
+    this.isAttacking = true;
+
+    this.sprite.play('man-attack', true);
+
+    this.scene.time.delayedCall(ATTACK_HIT_DELAY, () => {
+      if (this.sprite.active) onHitFrame?.();
     });
+
+    this.sprite.once('animationcomplete-man-attack', () => {
+      this.isAttacking = false;
+      this.resumeAfterInterrupt();
+    });
+
+    return true;
   }
+
+  // ── Hurt ──────────────────────────────────────────────────────────────────────
 
   playHurt() {
-    this.sprite.play('warrior-hurt', true);
+    if (!this.sprite.active || this.isAttacking) return;
+    this.sprite.play('man-hurt', true);
     this.scene.time.delayedCall(200, () => {
-      if (this.sprite.active) this.sprite.play('warrior-idle', true);
+      if (this.sprite.active && !this.isAttacking) this.resumeAfterInterrupt();
     });
   }
 
-  // ── UI ───────────────────────────────────────────────────────────────────────
+  // ── UI ────────────────────────────────────────────────────────────────────────
 
   updateUi(name: string, hp: number) {
     const nx = this.sprite.x;
@@ -139,7 +194,7 @@ export class Player {
     this.hpBar.lineStyle(1, 0x5ee8ff, 0.72).strokeRoundedRect(x - w / 2, y, w, h, 3);
   }
 
-  // ── Combat ───────────────────────────────────────────────────────────────────
+  // ── Combat ────────────────────────────────────────────────────────────────────
 
   flashHit() {
     this.sprite.setTint(0xffffff);
@@ -172,7 +227,7 @@ export class Player {
   }
 
   die(onComplete: () => void) {
-    this.sprite.play('warrior-death', true);
+    this.sprite.play('man-death', true);
     this.scene.tweens.add({
       targets: this.sprite, alpha: 0, duration: 550, ease: 'Power2',
       onComplete: () => onComplete(),
@@ -180,11 +235,14 @@ export class Player {
   }
 
   respawn(x: number, y: number) {
+    this.isAttacking = false;
+    this.jumpPhase   = 'none';
+    this.wasGrounded = true;
     this.sprite.setAlpha(1).clearTint().setPosition(x, y);
-    this.sprite.play('warrior-idle', true);
+    this.sprite.play('man-idle', true);
   }
 
-  // ── Visibility ───────────────────────────────────────────────────────────────
+  // ── Visibility ────────────────────────────────────────────────────────────────
 
   setAlpha(a: number) {
     this.sprite.setAlpha(a);
@@ -196,12 +254,29 @@ export class Player {
     this.nameText.setVisible(v);
   }
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   destroy() {
     this.sprite.destroy();
     this.nameText.destroy();
     this.hpBar.destroy();
     this.glow?.destroy();
+  }
+
+  // ── Private ───────────────────────────────────────────────────────────────────
+
+  private resumeAfterInterrupt() {
+    if (!this.sprite.active) return;
+    if (this.jumpPhase === 'none') {
+      this.sprite.play('man-idle', true);
+    } else if (this.jumpPhase === 'land') {
+      this.sprite.play('man-jump-land', true);
+      this.sprite.once('animationcomplete-man-jump-land', () => {
+        this.jumpPhase = 'none';
+      });
+    } else {
+      if (this.jumpPhase === 'start') this.jumpPhase = 'air_up';
+      this.sprite.play(this.jumpPhase === 'air_down' ? 'man-jump-preland' : 'man-jump-air', true);
+    }
   }
 }

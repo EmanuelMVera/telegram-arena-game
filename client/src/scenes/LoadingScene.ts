@@ -61,17 +61,21 @@ export class LoadingScene extends Phaser.Scene {
     this.load.image('avatar-ring','/assets/main-menu/avatar_ring.png');
     // logo is already loaded in BootScene as 'logo'
 
-    // ── Warrior character sprites ──────────────────────────────────────────────
-    this.load.spritesheet('warrior-idle', '/assets/characters/warrior/idle.webp', {
-      frameWidth: 1254, frameHeight: 1254,
+    // ── Man character sprites (frame size: 1254×1254) ─────────────────────────
+    // Spritesheets
+    this.load.spritesheet('man-attack', '/assets/characters/man/attack.webp', {
+      frameWidth: 1254, frameHeight: 1254,  // 7 frames → 8778×1254
     });
-    this.load.image('warrior-run',    '/assets/characters/warrior/run.png');
-    this.load.image('warrior-jump',   '/assets/characters/warrior/jump.png');
-    this.load.image('warrior-fall',   '/assets/characters/warrior/fall.png');
-    this.load.image('warrior-attack', '/assets/characters/warrior/attack-1.png');
-    this.load.image('warrior-hurt',   '/assets/characters/warrior/hurt.png');
-    this.load.image('warrior-death',  '/assets/characters/warrior/death.png');
-    this.load.image('warrior-parry',  '/assets/characters/warrior/parry.png');
+    this.load.spritesheet('man-jump', '/assets/characters/man/jump.webp', {
+      frameWidth: 1254, frameHeight: 1254,  // 11 frames → 13794×1254
+    });
+    // Single-frame images
+    this.load.image('man-idle',  '/assets/characters/man/idle.png');
+    this.load.image('man-run',   '/assets/characters/man/run.png');
+    this.load.image('man-fall',  '/assets/characters/man/fall.png');
+    this.load.image('man-hurt',  '/assets/characters/man/hurt.png');
+    this.load.image('man-death', '/assets/characters/man/death.png');
+    this.load.image('man-parry', '/assets/characters/man/parry.png');
 
     // Resize listener
     this.scale.on('resize', this.onResize, this);
