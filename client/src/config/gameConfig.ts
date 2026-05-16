@@ -13,6 +13,15 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   backgroundColor: "#111111",
   parent: "app",
   dom: { createContainer: true },
+  antialias: true,
+  roundPixels: true,
+  autoRound: true,
+  render: {
+    pixelArt: false,
+    antialias: true,
+    antialiasGL: true,
+    mipmapFilter: 'LINEAR',
+  },
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,

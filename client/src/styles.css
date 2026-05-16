@@ -13,6 +13,12 @@ body {
   overscroll-behavior: none;
   font-family: Arial, Helvetica, sans-serif;
 }
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
 
 #app {
   width: 100vw;
@@ -37,18 +43,18 @@ canvas {
 .left-controls,
 .right-controls {
   position: absolute;
-  bottom: 24px;
+  bottom: calc(var(--safe-area-bottom) + 20px);
   display: flex;
   gap: 12px;
   pointer-events: auto;
 }
 
 .left-controls {
-  left: 24px;
+  left: calc(var(--safe-area-left) + 16px);
 }
 
 .right-controls {
-  right: 24px;
+  right: calc(var(--safe-area-right) + 16px);
 }
 
 #mobile-controls button {
@@ -69,4 +75,3 @@ canvas {
 body.telegram-mobile.gameplay-mode #mobile-controls {
   display: block;
 }
-

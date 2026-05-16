@@ -9,6 +9,7 @@ import {
 } from '../telegram/telegram';
 import type { Direction, PlayerData } from '../types/player';
 import { createHud, updateHud } from '../ui/hud';
+import { getLayout } from '../utils/layout';
 import { Player } from '../entities/Player';
 
 export class GameScene extends Phaser.Scene {
@@ -71,15 +72,14 @@ export class GameScene extends Phaser.Scene {
     this.attackKeyAlt = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.J);
     this.colliders.forEach((obj) => this.physics.add.collider(this.localPlayer.sprite, obj));
 
+    const layout = getLayout(this.scale.width, this.scale.height);
     this.hudText = createHud(this);
-    this.timerText = this.add.text(this.scale.width / 2, 14, '3:00', {
+    this.timerText = this.add.text(Math.round(this.scale.width / 2), Math.round(layout.safeTop + 14), '3:00', {
       fontSize: '18px', color: '#dff8ff', fontStyle: 'bold',
       backgroundColor: 'rgba(2,8,17,0.75)', padding: { x: 10, y: 5 },
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100);
 
-    this.scale.on('resize', (size: Phaser.Structs.Size) => {
-      this.timerText?.setX(size.width / 2);
-    }, this);
+    this.scale.on('resize', this.onResize, this);
 
     this.registerSocketEvents();
     this.joinGameOnce();
@@ -578,6 +578,13 @@ export class GameScene extends Phaser.Scene {
       'attackVisual','hitVisual','playerKilled','duplicateConnection','playerLeft','timerUpdate','gameOver']
       .forEach((e) => socket.off(e));
     this.hasJoinedGame = false;
+    this.scale.off('resize', this.onResize, this);
+  }
+
+  private onResize(size: Phaser.Structs.Size) {
+    const l = getLayout(size.width, size.height);
+    this.timerText?.setPosition(Math.round(size.width / 2), Math.round(l.safeTop + 14));
+    this.hudText?.setPosition(Math.round(14 + l.safeLeft), Math.round(12 + l.safeTop));
   }
 
   // ── COMBAT VISUALS ───────────────────────────────────────────────────────────
