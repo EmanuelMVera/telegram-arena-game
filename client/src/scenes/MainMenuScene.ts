@@ -144,14 +144,14 @@ export class MainMenuScene extends Phaser.Scene {
     const cx = layout.cx;
 
     // Logo — sits in top 10% of screen
-    const logoY = h * 0.082;
-    this.createLogoSection(cx, logoY, w, layout);
+    const logoY = h * 0.12;
+    this.createLogoSection(cx, logoY, w, h, layout);
 
     // Avatar — size proportional to screen, but more conservative on short screens
     const avatarR = clamp(Math.round(Math.min(w * 0.105, h * 0.075, 62)), 32, 62);
     // Pin avatar below the logo separator with a fixed gap
     const logoSepY = logoY + layout.shortSide * 0.085;
-    const avatarCy = Math.max(logoSepY + avatarR + layout.pad * 1.5, h * 0.26);
+    const avatarCy = Math.max(logoSepY + avatarR + layout.pad * 1.8, h * 0.33);
     this.createAvatarCard(cx, avatarCy, avatarR, w, h, layout);
 
     // Name / alias — always below avatar with proportional gap
@@ -161,7 +161,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Buttons — below name section (name + edit button)
     const nameSectionH = layout.fs(22) + layout.pad * 3.5 + Math.max(26, Math.round(layout.fs(14) * 2));
-    const btnTopY = nameY + nameSectionH;
+    const btnTopY = Math.max(nameY + nameSectionH, h * 0.68);
     this.createButtons(cx, btnTopY, Math.min(w * 0.86, 420), layout);
   }
 
@@ -173,7 +173,7 @@ export class MainMenuScene extends Phaser.Scene {
     const rightCx = w * 0.73;
 
     // Logo on the left side
-    this.createLogoSection(leftCx, h * 0.12, w, layout);
+    this.createLogoSection(leftCx, h * 0.12, w, h, layout);
 
     // Avatar on the right
     const avatarR = clamp(Math.round(Math.min(w * 0.080, h * 0.115)), 38, 72);
@@ -191,7 +191,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   // ── LOGO ──────────────────────────────────────────────────────────────────────
 
-  private createLogoSection(cx: number, cy: number, w: number, layout: ReturnType<typeof getLayout>) {
+  private createLogoSection(cx: number, cy: number, w: number, h: number, layout: ReturnType<typeof getLayout>) {
     // Diamond + decorative lines above logo text
     const ornY = cy - layout.vmin * 0.045;
     this.drawDiamond(cx, ornY, 8, 0x5ee8ff, 0.90).setDepth(3);
@@ -202,8 +202,9 @@ export class MainMenuScene extends Phaser.Scene {
 
     if (this.textures.exists('logo')) {
       const logo = this.add.image(cx, cy, 'logo').setDepth(3);
-      const maxLogoW = Math.min(w * 0.32, 320);
-      logo.setScale(Math.min(maxLogoW / logo.width, layout.vmin * 0.14 / logo.height));
+      const maxLogoW = Math.min(w * (layout.isPortrait ? 0.84 : 0.46), layout.isPortrait ? 520 : 380);
+      const maxLogoH = layout.isPortrait ? h * 0.18 : h * 0.2;
+      logo.setScale(Math.min(maxLogoW / logo.width, maxLogoH / logo.height));
     } else {
       // Fallback text title
       const fs = Math.round(layout.fs(28));
