@@ -139,17 +139,17 @@ export class LobbyScene extends Phaser.Scene {
     _panelW: number,
     layout: ReturnType<typeof getLayout>,
   ) {
-    const labelFs = Math.round(layout.fs(16));
+    const labelFs = Math.max(14, Math.round(layout.fs(16)));
     this.add.text(cx, labelY, 'SALA', {
       fontSize: `${labelFs}px`, color: '#4a8a9a', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(3);
 
-    const codeFs = Math.round(layout.fs(52));
+    const codeFs = Math.max(44, Math.round(layout.fs(52)));
     this.add.text(cx, codeY, this.roomId, {
       fontSize: `${codeFs}px`, color: '#dff8ff', fontStyle: 'bold',
     }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 10).setDepth(3);
 
-    const copyFs = Math.round(layout.fs(16));
+    const copyFs = Math.max(18, Math.round(layout.fs(18)));
     const copyBtn = this.add.text(cx, copyY, '[ COPIAR CÓDIGO ]', {
       fontSize: `${copyFs}px`, color: '#5ee8ff',
     }).setOrigin(0.5).setDepth(3).setInteractive({ useHandCursor: true });
@@ -175,7 +175,7 @@ export class LobbyScene extends Phaser.Scene {
     this.participantRows = [];
 
     const count = Object.keys(this.participants).length;
-    const countFs = Math.round(layout.fs(16));
+    const countFs = Math.max(16, Math.round(layout.fs(17)));
     this.playerCountTxt = this.add.text(cx, startY, `JUGADORES (${count}/4)`, {
       fontSize: `${countFs}px`, color: '#3a7a8a',
     }).setOrigin(0.5).setDepth(3);
@@ -186,8 +186,8 @@ export class LobbyScene extends Phaser.Scene {
     const listStartY = startY + countFs + layout.pad * 1.6;
     const myId = getClientIdentity().id;
     const rowInnerW = panelW - 24;
-    const rowFs   = Math.round(layout.fs(18));
-    const statusFs = Math.round(layout.fs(15));
+    const rowFs   = Math.max(20, Math.round(layout.fs(21)));
+    const statusFs = Math.max(17, Math.round(layout.fs(17)));
 
     Object.entries(this.participants).forEach(([playerId, p], i) => {
       const isMe = playerId === myId;
@@ -221,10 +221,10 @@ export class LobbyScene extends Phaser.Scene {
     layout: ReturnType<typeof getLayout>,
     landscape: boolean,
   ) {
-    const btnH   = Math.max(56, Math.round(layout.fs(20) * 2.4));
-    const btnFs  = Math.round(layout.fs(18));
-    const backH  = Math.max(44, Math.round(layout.fs(16) * 2));
-    const backFs = Math.round(layout.fs(15));
+    const btnH   = Math.max(62, Math.round(layout.fs(22) * 2.35));
+    const btnFs  = Math.max(20, Math.round(layout.fs(21)));
+    const backH  = Math.max(48, Math.round(layout.fs(18) * 2));
+    const backFs = Math.max(16, Math.round(layout.fs(17)));
 
     // Positions depend on layout mode
     const readyY = landscape ? h * 0.35 : (this.isHost ? h * 0.69 : h * 0.76);
@@ -325,7 +325,7 @@ export class LobbyScene extends Phaser.Scene {
       const landscape = layout.isLandscape;
       // Match exactly the same formula used in buildLandscapeLayout / buildPortraitLayout
       const btnW  = landscape ? Math.min(w * 0.48, 340) : Math.min(w * 0.88, 430);
-      const btnH  = Math.max(40, Math.round(layout.fs(16) * 2.4));
+      const btnH  = Math.max(62, Math.round(layout.fs(22) * 2.35));
       const startY = landscape ? h * 0.52 : h * 0.80;
       const cx     = landscape ? w * 0.72 : layout.cx;
       this.startBtnG.clear();

@@ -202,8 +202,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     if (this.textures.exists('logo')) {
       const logo = this.add.image(cx, cy, 'logo').setDepth(3);
-      const maxLogoW = Math.min(w * (layout.isPortrait ? 0.84 : 0.46), layout.isPortrait ? 520 : 380);
-      const maxLogoH = layout.isPortrait ? h * 0.18 : h * 0.2;
+      const maxLogoW = Math.min(w * (layout.isPortrait ? 0.94 : 0.52), layout.isPortrait ? 620 : 440);
+      const maxLogoH = layout.isPortrait ? h * 0.21 : h * 0.22;
       logo.setScale(Math.min(maxLogoW / logo.width, maxLogoH / logo.height));
     } else {
       // Fallback text title
@@ -293,7 +293,7 @@ export class MainMenuScene extends Phaser.Scene {
     _avatarR: number,
     layout: ReturnType<typeof getLayout>,
   ) {
-    const nameFs = Math.round(layout.fs(22));
+    const nameFs = Math.max(24, Math.round(layout.fs(26)));
     this.aliasText = this.add.text(cx, nameY, getPlayerDisplayName(), {
       fontSize: `${nameFs}px`, color: '#e8feff', fontStyle: 'bold',
     }).setOrigin(0.5).setShadow(0, 0, '#2dd7e6', 10).setDepth(6);
@@ -310,7 +310,7 @@ export class MainMenuScene extends Phaser.Scene {
     const abBtnY = sepY + layout.pad * 1.8;
     const aBtnW = Math.min(layout.vmin * 0.38, 148);
     const aBtnH = Math.max(26, Math.round(layout.fs(14) * 2));
-    const aBtnFs = Math.round(layout.fs(12));
+    const aBtnFs = Math.max(16, Math.round(layout.fs(15)));
 
     const abG = this.add.graphics().setDepth(6);
     const drawABtn = (hover: boolean) => {
@@ -363,7 +363,7 @@ export class MainMenuScene extends Phaser.Scene {
       const by = topY + idx * spacing;
 
       const dW = Math.min(maxBtnW, layout.contentBounds.width * 0.9);
-      const dH = Math.max(54, Math.round(layout.fs(17) * 2.4));
+      const dH = Math.max(62, Math.round(layout.fs(20) * 2.45));
       const btn = this.add.rectangle(cx, by, dW, dH, 0x0a1929, 0.9)
         .setStrokeStyle(2, 0x63d9ea, 0.75)
         .setDepth(8)
@@ -386,7 +386,7 @@ export class MainMenuScene extends Phaser.Scene {
       const rimGlow = this.add.rectangle(cx, by, dW + 6, dH + 6).setStrokeStyle(2, 0xa9f0ff, 0.75).setDepth(9).setAlpha(0);
 
       // Fallback label (shown if image asset has no text baked in)
-      const lblFs = Math.round(layout.fs(13));
+      const lblFs = Math.max(20, Math.round(layout.fs(22)));
       const lbl = this.add.text(cx, by, label, {
         fontSize: `${lblFs}px`, color: '#ddf5ff', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(10).setAlpha(1);

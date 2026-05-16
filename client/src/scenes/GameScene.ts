@@ -50,7 +50,7 @@ export class GameScene extends Phaser.Scene {
   private readonly localAttackCooldown = 500;
   private readonly worldWidth = 2200;
   private readonly worldHeight = 980;
-  private readonly defaultSpawn = { x: 1100, y: 760 };
+  private readonly defaultSpawn = { x: 1100, y: 900 };
 
   constructor() { super('GameScene'); }
 
@@ -193,24 +193,19 @@ export class GameScene extends Phaser.Scene {
 
   private safeFrames(textureKey: string, desiredStart: number, desiredEnd: number) {
     const texture = this.textures.get(textureKey);
+    if (!texture || texture.key === '__MISSING') return [{ key: 'man-idle' }];
     const frameNames = texture.getFrameNames().filter((n) => n !== '__BASE');
+    if (frameNames.length === 0) return [{ key: 'man-idle' }];
     const maxFrameIndex = Math.max(0, frameNames.length - 1);
     const start = Phaser.Math.Clamp(desiredStart, 0, maxFrameIndex);
     const end = Phaser.Math.Clamp(desiredEnd, start, maxFrameIndex);
-    if (start !== desiredStart || end !== desiredEnd) {
-      console.warn(
-        `[GameScene] Adjusted frame range for "${textureKey}" from ${desiredStart}-${desiredEnd} to ${start}-${end}.`,
-      );
-    }
     return this.anims.generateFrameNumbers(textureKey, { start, end });
   }
 
   private validatePlayerTextures() {
     const requiredTextureKeys = ['man-idle', 'man-run', 'man-fall', 'man-hurt', 'man-death', 'man-parry', 'man-attack', 'man-jump'];
     requiredTextureKeys.forEach((key) => {
-      if (!this.textures.exists(key)) {
-        console.warn(`[GameScene] Missing texture key "${key}".`);
-      }
+      if (!this.textures.exists(key)) throw new Error(`Missing required texture: ${key}`);
     });
   }
 
@@ -310,8 +305,8 @@ export class GameScene extends Phaser.Scene {
     const ground = this.add.rectangle(this.worldWidth / 2, this.worldHeight - 20, this.worldWidth, 40, 0x070e1a).setDepth(1);
     this.physics.add.existing(ground, true);
     const groundBody = ground.body as Phaser.Physics.Arcade.StaticBody;
-    groundBody.setSize(this.worldWidth, 24);
-    groundBody.setOffset(-this.worldWidth / 2, -12);
+    groundBody.setSize(this.worldWidth, 40);
+    groundBody.setOffset(-this.worldWidth / 2, -20);
     groundBody.updateFromGameObject();
     this.colliders.push(ground);
     this.add.rectangle(this.worldWidth / 2, this.worldHeight - 40, this.worldWidth, 2, 0x5ee8ff, 0.18).setDepth(2);
