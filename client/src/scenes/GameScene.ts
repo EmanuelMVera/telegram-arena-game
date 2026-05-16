@@ -111,9 +111,13 @@ export class GameScene extends Phaser.Scene {
     const canUseCoyote    = time - this.lastGroundedTime   <= this.coyoteTime;
     const hasBufferedJump = time - this.lastJumpPressedTime <= this.jumpBufferTime;
     if (hasBufferedJump && canUseCoyote) {
-      this.localPlayer.sprite.setVelocityY(this.jumpForce);
-      this.lastJumpPressedTime = 0;
-      this.lastGroundedTime    = 0;
+      const jumped = this.localPlayer.startJump(() => {
+        body.setVelocityY(this.jumpForce);
+      });
+      if (jumped) {
+        this.lastJumpPressedTime = 0;
+        this.lastGroundedTime    = 0;
+      }
     }
 
     if (!jumpPressed && body.velocity.y < -120) {

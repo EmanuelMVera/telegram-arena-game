@@ -8,16 +8,40 @@ export interface PlayerConfig {
   depth?: number;
 }
 
-const DISPLAY_SIZE = 80;
-const BODY_W = 44;
-const BODY_H = 60;
-const BODY_OFF_X = (DISPLAY_SIZE - BODY_W) / 2;
-const BODY_OFF_Y = (DISPLAY_SIZE - BODY_H) / 2 + 4;
+// ── Tuning knobs ──────────────────────────────────────────────────────────────
+// Change these constants to adjust size, hitbox and jump feel without touching logic.
 
-// Frame 4 (index 3) at 14 fps = 3 × (1000 / 14) ≈ 214 ms
-const ATTACK_HIT_DELAY = Math.round(3 * 1000 / 14);
+const PLAYER_SCALE = 140;   // display size (px). Raise → bigger character.
 
-type JumpPhase = 'none' | 'start' | 'air_up' | 'air_down' | 'land';
+// Physics hitbox — smaller than display so the character doesn't "float"
+const BODY_W = 52;
+const BODY_H = 100;
+
+// FOOT_INSET: transparent space below the feet inside the sprite frame (px).
+// 0 → body bottom = sprite bottom exactly.
+// Increase if the character appears to float above the ground.
+const FOOT_INSET = 4;
+
+// Jump spritesheet fps (man-jump and man-attack share the same source rate)
+const JUMP_FPS = 14;
+
+// How many startup frames play on the ground before the jump velocity fires.
+// Frames 1–5 (indices 0–4) are the crouch/impulse; velocity fires on frame 6.
+const JUMP_TAKEOFF_FRAME = 5;
+
+// Frame 4 of attack (1-indexed) = index 3 at 14 fps → hit-callback delay
+const ATTACK_HIT_DELAY = Math.round(3 * 1000 / JUMP_FPS); // ≈ 214 ms
+
+// ── Derived — do not touch these ─────────────────────────────────────────────
+const BODY_OFF_X = (PLAYER_SCALE - BODY_W) / 2;
+// body.bottom = sprite.y + PLAYER_SCALE/2 − FOOT_INSET  (flush with visual feet)
+const BODY_OFF_Y = PLAYER_SCALE - BODY_H - FOOT_INSET;
+// Delay between "jump pressed" and physics velocity being applied
+const TAKEOFF_PHYSICS_MS = Math.round(JUMP_TAKEOFF_FRAME * 1000 / JUMP_FPS); // ≈ 357 ms
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+type JumpPhase = 'none' | 'jump_start' | 'air_up' | 'air_down' | 'land';
 
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
@@ -33,21 +57,21 @@ export class Player {
   private isAttacking = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: PlayerConfig) {
-    this.scene   = scene;
-    this.isLocal = config.isLocal;
+    this.scene    = scene;
+    this.isLocal  = config.isLocal;
     this.tintColor = config.tint ?? 0xffffff;
 
     const depth = config.depth ?? (config.isLocal ? 6 : 5);
 
     this.sprite = scene.physics.add.sprite(x, y, 'man-idle')
-      .setDisplaySize(DISPLAY_SIZE, DISPLAY_SIZE)
+      .setDisplaySize(PLAYER_SCALE, PLAYER_SCALE)
       .setDepth(depth)
       .play('man-idle');
 
     if (config.isLocal) {
       this.sprite
         .setCollideWorldBounds(true)
-        .setBounce(0.05)
+        .setBounce(0)
         .setMaxVelocity(280, 850);
     } else {
       this.sprite.setTint(this.tintColor);
@@ -58,7 +82,7 @@ export class Player {
     (this.sprite.body as Phaser.Physics.Arcade.Body).setOffset(BODY_OFF_X, BODY_OFF_Y);
 
     if (config.isLocal) {
-      this.glow = scene.add.circle(x, y, 28, 0x5ee8ff, 0.07).setDepth(depth - 1);
+      this.glow = scene.add.circle(x, y, 34, 0x5ee8ff, 0.07).setDepth(depth - 1);
       scene.tweens.add({
         targets: this.glow,
         alpha: { from: 0.03, to: 0.12 }, scale: { from: 0.88, to: 1.12 },
@@ -66,7 +90,8 @@ export class Player {
       });
     }
 
-    this.nameText = scene.add.text(x, y - 54, config.name, {
+    const labelY = y - PLAYER_SCALE / 2 - 16;
+    this.nameText = scene.add.text(x, labelY, config.name, {
       fontSize: '12px', color: '#e9feff',
       backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 4, y: 2 },
     }).setOrigin(0.5).setDepth(40);
@@ -90,53 +115,103 @@ export class Player {
     this.sprite.setFlipX(dir === 'left');
   }
 
-  // ── Jump state machine ────────────────────────────────────────────────────────
+  // ── Jump ──────────────────────────────────────────────────────────────────────
 
+  /**
+   * Initiates a jump. Returns false if already jumping (caller skips cooldown).
+   *
+   * On the ground: plays the 5-frame startup animation first, then calls
+   * applyVelocity() at TAKEOFF_PHYSICS_MS (≈357 ms) so the character
+   * physically launches only after the crouch/impulse animation is done.
+   *
+   * Coyote jump (wasGrounded=false): skips startup, launches immediately.
+   */
+  startJump(applyVelocity: () => void): boolean {
+    if (this.jumpPhase !== 'none') return false;
+
+    if (!this.wasGrounded) {
+      // Coyote-time jump: no startup animation, instant takeoff
+      applyVelocity();
+      this.jumpPhase = 'air_up';
+      this.sprite.play('man-jump-air', true);
+      return true;
+    }
+
+    // Normal ground jump: startup frames first, then physics
+    this.jumpPhase = 'jump_start';
+    this.sprite.play('man-jump-start', true);
+
+    // Apply physics velocity at the takeoff frame boundary
+    this.scene.time.delayedCall(TAKEOFF_PHYSICS_MS, () => {
+      if (this.jumpPhase === 'jump_start' && this.sprite.active) {
+        applyVelocity();
+        // Keep startup animation running — the takeoff frame (index 5) plays
+        // for its remaining duration before animationcomplete switches to air
+      }
+    });
+
+    // Switch to air phase once all startup frames have played
+    this.sprite.once('animationcomplete-man-jump-start', () => {
+      if (this.jumpPhase === 'jump_start' && this.sprite.active) {
+        this.jumpPhase = 'air_up';
+        this.sprite.play('man-jump-air', true);
+      }
+    });
+
+    return true;
+  }
+
+  // ── Animation state machine ────────────────────────────────────────────────────
+
+  /**
+   * Call every frame with current physics state.
+   * Handles: ground locomotion, spontaneous fall, air sub-phases, landing.
+   * Does NOT initiate jumps — that is done by startJump().
+   */
   updateAnimation(isGrounded: boolean, velX: number, velY: number) {
-    const justLanded     = !this.wasGrounded && isGrounded;
-    const justLeftGround = this.wasGrounded  && !isGrounded;
+    // Never override animation while attacking
+    if (this.isAttacking) { this.wasGrounded = isGrounded; return; }
 
-    // Landing
-    if (justLanded && this.jumpPhase !== 'none' && this.jumpPhase !== 'land') {
+    // ── Landing ──────────────────────────────────────────────────────────────
+    const justLanded = !this.wasGrounded && isGrounded;
+    if (justLanded && this.jumpPhase !== 'none' && this.jumpPhase !== 'jump_start' && this.jumpPhase !== 'land') {
       this.jumpPhase = 'land';
-      if (!this.isAttacking) {
-        this.sprite.play('man-jump-land', true);
-        this.sprite.once('animationcomplete-man-jump-land', () => {
-          this.jumpPhase = 'none';
-        });
-      }
+      this.sprite.play('man-jump-land', true);
+      this.sprite.once('animationcomplete-man-jump-land', () => {
+        this.jumpPhase = 'none';
+      });
+      this.wasGrounded = isGrounded;
+      return;
+    }
 
-    // Left the ground
-    } else if (justLeftGround && this.jumpPhase === 'none') {
-      this.jumpPhase = 'start';
-      if (!this.isAttacking) {
-        this.sprite.play('man-jump-start', true);
-        this.sprite.once('animationcomplete-man-jump-start', () => {
-          if (this.jumpPhase === 'start') {
-            this.jumpPhase = 'air_up';
-            this.sprite.play('man-jump-air', true);
-          }
-        });
-      }
+    // ── Self-managed phases ───────────────────────────────────────────────────
+    // jump_start is driven by the timer + animationcomplete in startJump().
+    // land is driven by its own animationcomplete listener above.
+    if (this.jumpPhase === 'jump_start' || this.jumpPhase === 'land') {
+      this.wasGrounded = isGrounded;
+      return;
+    }
 
-    // In-air sub-phases (skip during attack or while start/land anims play)
-    } else if (!isGrounded && !this.isAttacking
-               && this.jumpPhase !== 'start' && this.jumpPhase !== 'land') {
-      if (velY > 80 && this.jumpPhase !== 'air_down') {
+    // ── In air ───────────────────────────────────────────────────────────────
+    if (!isGrounded) {
+      if (this.jumpPhase === 'none') {
+        // Spontaneous fall (walked off a ledge with no jump)
+        this.jumpPhase = velY >= 0 ? 'air_down' : 'air_up';
+        this.sprite.play(this.jumpPhase === 'air_down' ? 'man-jump-preland' : 'man-jump-air', true);
+      } else if (velY > 80 && this.jumpPhase !== 'air_down') {
         this.jumpPhase = 'air_down';
         this.sprite.play('man-jump-preland', true);
       } else if (velY <= 80 && this.jumpPhase !== 'air_up') {
         this.jumpPhase = 'air_up';
         this.sprite.play('man-jump-air', true);
       }
+      this.wasGrounded = isGrounded;
+      return;
+    }
 
-    // Ground locomotion
-    } else if (isGrounded && this.jumpPhase === 'none' && !this.isAttacking) {
-      if (Math.abs(velX) > 30) {
-        this.sprite.play('man-run', true);
-      } else {
-        this.sprite.play('man-idle', true);
-      }
+    // ── Ground locomotion ─────────────────────────────────────────────────────
+    if (this.jumpPhase === 'none') {
+      this.sprite.play(Math.abs(velX) > 30 ? 'man-run' : 'man-idle', true);
     }
 
     this.wasGrounded = isGrounded;
@@ -147,8 +222,11 @@ export class Player {
   /** Returns false if already attacking (caller can skip cooldown reset). */
   playAttack(onHitFrame?: () => void): boolean {
     if (this.isAttacking) return false;
-    this.isAttacking = true;
 
+    // Attacking on the ground cancels any pending jump startup
+    if (this.jumpPhase === 'jump_start') this.jumpPhase = 'none';
+
+    this.isAttacking = true;
     this.sprite.play('man-attack', true);
 
     this.scene.time.delayedCall(ATTACK_HIT_DELAY, () => {
@@ -167,8 +245,10 @@ export class Player {
 
   playHurt() {
     if (!this.sprite.active || this.isAttacking) return;
+    // Hurt cancels any pending jump startup so velocity is never applied silently
+    if (this.jumpPhase === 'jump_start') this.jumpPhase = 'none';
     this.sprite.play('man-hurt', true);
-    this.scene.time.delayedCall(200, () => {
+    this.scene.time.delayedCall(220, () => {
       if (this.sprite.active && !this.isAttacking) this.resumeAfterInterrupt();
     });
   }
@@ -178,15 +258,16 @@ export class Player {
   updateUi(name: string, hp: number) {
     const nx = this.sprite.x;
     const ny = this.sprite.y;
-    this.nameText.setText(name).setPosition(nx, ny - 54);
+    this.nameText.setText(name).setPosition(nx, ny - PLAYER_SCALE / 2 - 16);
     this.hpBar.setPosition(0, 0);
     this.drawHp(hp);
     if (this.glow) this.glow.setPosition(nx, ny);
   }
 
   private drawHp(hp: number) {
-    const x = this.sprite.x, y = this.sprite.y - 40;
-    const w = 52, h = 6, fill = Phaser.Math.Clamp(hp, 0, 100) / 100;
+    const x = this.sprite.x;
+    const y = this.sprite.y - PLAYER_SCALE / 2 + 4;
+    const w = 60, h = 6, fill = Phaser.Math.Clamp(hp, 0, 100) / 100;
     this.hpBar.clear();
     this.hpBar.fillStyle(0x050c13, 0.9).fillRoundedRect(x - w / 2, y, w, h, 3);
     const color = fill > 0.5 ? 0x40deaa : fill > 0.25 ? 0xddaa22 : 0xdd3333;
@@ -265,18 +346,27 @@ export class Player {
 
   // ── Private ───────────────────────────────────────────────────────────────────
 
+  /** Re-enter the correct animation after attack or hurt finishes. */
   private resumeAfterInterrupt() {
     if (!this.sprite.active) return;
-    if (this.jumpPhase === 'none') {
-      this.sprite.play('man-idle', true);
-    } else if (this.jumpPhase === 'land') {
-      this.sprite.play('man-jump-land', true);
-      this.sprite.once('animationcomplete-man-jump-land', () => {
-        this.jumpPhase = 'none';
-      });
-    } else {
-      if (this.jumpPhase === 'start') this.jumpPhase = 'air_up';
-      this.sprite.play(this.jumpPhase === 'air_down' ? 'man-jump-preland' : 'man-jump-air', true);
+    switch (this.jumpPhase) {
+      case 'none':
+        this.sprite.play('man-idle', true);
+        break;
+      case 'land':
+        this.sprite.play('man-jump-land', true);
+        this.sprite.once('animationcomplete-man-jump-land', () => { this.jumpPhase = 'none'; });
+        break;
+      case 'jump_start':
+        // Startup was interrupted mid-air: skip to rising phase
+        this.jumpPhase = 'air_up';
+        this.sprite.play('man-jump-air', true);
+        break;
+      case 'air_down':
+        this.sprite.play('man-jump-preland', true);
+        break;
+      default: // air_up
+        this.sprite.play('man-jump-air', true);
     }
   }
 }
