@@ -64,10 +64,10 @@ export class LoadingScene extends Phaser.Scene {
     // ── Man character sprites (frame size: 1254×1254) ─────────────────────────
     // Spritesheets
     this.load.spritesheet('man-attack', '/assets/characters/man/attack.webp', {
-      frameWidth: 1280, frameHeight: 1280,
+      frameWidth: 1254, frameHeight: 1254,
     });
     this.load.spritesheet('man-jump', '/assets/characters/man/jump.webp', {
-      frameWidth: 1280, frameHeight: 1280,
+      frameWidth: 1254, frameHeight: 1254,
     });
     // Single-frame images
     this.load.image('man-idle',  '/assets/characters/man/idle.png');

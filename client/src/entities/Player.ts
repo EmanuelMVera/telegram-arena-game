@@ -11,7 +11,7 @@ export interface PlayerConfig {
 // ── Tuning knobs ──────────────────────────────────────────────────────────────
 // Change these constants to adjust size, hitbox and jump feel without touching logic.
 
-const PLAYER_SCALE = 180;   // display size (px). Raise → bigger character.
+const PLAYER_SCALE = 196;   // display size (px). Raise → bigger character.
 
 // Physics hitbox — smaller than display so the character doesn't "float"
 const BODY_W = 66;
