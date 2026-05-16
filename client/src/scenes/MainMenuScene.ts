@@ -345,39 +345,34 @@ export class MainMenuScene extends Phaser.Scene {
     maxBtnW: number,
     layout: ReturnType<typeof getLayout>,
   ) {
-    const defs: { key: string; label: string; action: () => void }[] = [
+    const defs: { label: string; action: () => void }[] = [
       {
-        key: 'btn-create',
         label: 'CREAR PARTIDA',
         action: () => this.handleCreate(),
       },
       {
-        key: 'btn-join',
         label: 'UNIRSE A PARTIDA',
         action: () => this.openJoinModal(),
       },
     ];
 
-    const spacing = Math.min(72, Math.round(layout.vmin * 0.14));
+    const spacing = Math.max(74, Math.round(layout.actionBounds.height * 0.32));
 
-    defs.forEach(({ key, label, action }, idx) => {
+    defs.forEach(({ label, action }, idx) => {
       const by = topY + idx * spacing;
 
-      const btn = this.add.image(cx, by, key).setDepth(8).setInteractive({ useHandCursor: true });
-      const scale = Math.min(maxBtnW / btn.width, 80 / btn.height);
-      btn.setScale(scale);
-      const dW = btn.displayWidth;
-      const dH = btn.displayHeight;
+      const dW = Math.min(maxBtnW, layout.contentBounds.width * 0.9);
+      const dH = Math.max(54, Math.round(layout.fs(17) * 2.4));
+      const btn = this.add.rectangle(cx, by, dW, dH, 0x0a1929, 0.9)
+        .setStrokeStyle(2, 0x63d9ea, 0.75)
+        .setDepth(8)
+        .setInteractive({ useHandCursor: true });
 
       // Drop shadow
-      const shadow = this.add.graphics().setDepth(6).setAlpha(0.50);
-      shadow.fillStyle(0x000000, 0.70);
-      shadow.fillRoundedRect(cx - dW / 2 + 6, by - dH / 2 + 6, dW, dH, 5);
+      this.add.rectangle(cx + 3, by + 4, dW, dH, 0x000000, 0.25).setDepth(6);
 
       // Idle glow
-      const idleGlow = this.add.graphics().setDepth(7).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.15);
-      idleGlow.fillStyle(0x0044aa, 0.45);
-      idleGlow.fillRoundedRect(cx - dW / 2 - 6, by - dH / 2 - 3, dW + 12, dH + 6, 8);
+      const idleGlow = this.add.rectangle(cx, by, dW + 10, dH + 8, 0x52bfd4, 0.08).setDepth(7).setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({
         targets: idleGlow,
         alpha: { from: 0.08, to: 0.26 },
@@ -386,72 +381,37 @@ export class MainMenuScene extends Phaser.Scene {
       });
 
       // Hover / press glow refs
-      const atmoGlow = this.add.graphics().setDepth(7).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
-      atmoGlow.fillStyle(0x1155cc, 0.55);
-      atmoGlow.fillRoundedRect(cx - dW / 2 - 18, by - dH * 0.9, dW + 36, dH * 1.8, 14);
-
-      const rimGlow = this.add.graphics().setDepth(9).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
-      rimGlow.lineStyle(4, 0x66aaff, 0.8);
-      rimGlow.strokeRoundedRect(cx - dW / 2, by - dH / 2, dW, dH, 4);
+      const atmoGlow = this.add.rectangle(cx, by, dW + 24, dH + 20, 0x68cde0, 0.1).setDepth(7).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      const rimGlow = this.add.rectangle(cx, by, dW + 6, dH + 6).setStrokeStyle(2, 0xa9f0ff, 0.75).setDepth(9).setAlpha(0);
 
       // Fallback label (shown if image asset has no text baked in)
       const lblFs = Math.round(layout.fs(13));
       const lbl = this.add.text(cx, by, label, {
         fontSize: `${lblFs}px`, color: '#ddf5ff', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(10).setAlpha(0);
+      }).setOrigin(0.5).setDepth(10).setAlpha(1);
       // Only show label if the button image appears blank (can't detect easily, keep at 0)
 
       btn.on('pointerover', () => {
         this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
-        this.tweens.add({ targets: btn, scaleX: scale * 1.03, scaleY: scale * 1.03, duration: 120, ease: 'Back.easeOut' });
+        this.tweens.add({ targets: [btn, lbl], scaleX: 1.02, scaleY: 1.02, duration: 120, ease: 'Back.easeOut' });
         this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 1, duration: 140 });
-        btn.setTint(0xbbddff);
-        void lbl; // suppress unused warning
+        btn.setFillStyle(0x12263a, 0.94);
       });
 
       btn.on('pointerout', () => {
         this.tweens.killTweensOf([btn, atmoGlow, rimGlow]);
-        this.tweens.add({ targets: btn, scaleX: scale, scaleY: scale, duration: 160, ease: 'Power2' });
+        this.tweens.add({ targets: [btn, lbl], scaleX: 1, scaleY: 1, duration: 160, ease: 'Power2' });
         this.tweens.add({ targets: [atmoGlow, rimGlow], alpha: 0, duration: 200 });
-        btn.clearTint();
+        btn.setFillStyle(0x0a1929, 0.9);
       });
 
       btn.on('pointerdown', () => {
-        this.tweens.killTweensOf(btn);
-        this.tweens.add({ targets: btn, scaleX: scale * 0.96, scaleY: scale * 0.96, duration: 65, yoyo: true });
-        btn.setTint(0xffffff);
-        this.time.delayedCall(80, () => btn.setTint(0xbbddff));
+        this.tweens.killTweensOf([btn, lbl]);
+        this.tweens.add({ targets: [btn, lbl], scaleX: 0.98, scaleY: 0.98, duration: 65, yoyo: true });
         this.tweens.add({ targets: rimGlow, alpha: 2.0, duration: 60, yoyo: true });
-        this.emitButtonSpark(cx, by, dW, dH);
         this.time.delayedCall(90, action);
       });
     });
-  }
-
-  private emitButtonSpark(cx: number, cy: number, bw: number, bh: number) {
-    for (let i = 0; i < 12; i++) {
-      const side = Phaser.Math.Between(0, 3);
-      let px = cx, py = cy;
-      if (side === 0)      { px = cx + Phaser.Math.Between(-bw / 2, bw / 2); py = cy - bh / 2; }
-      else if (side === 1) { px = cx + Phaser.Math.Between(-bw / 2, bw / 2); py = cy + bh / 2; }
-      else if (side === 2) { px = cx - bw / 2; py = cy + Phaser.Math.Between(-bh / 2, bh / 2); }
-      else                 { px = cx + bw / 2; py = cy + Phaser.Math.Between(-bh / 2, bh / 2); }
-      const r = Phaser.Math.FloatBetween(2.0, 5.0);
-      const color = Phaser.Math.RND.pick([0x88ccff, 0xaaddff, 0x5599ee, 0xffffff]);
-      const spark = this.add.arc(px, py, r, 0, 360, false, color, 1)
-        .setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const speed = Phaser.Math.FloatBetween(45, 130);
-      this.tweens.add({
-        targets: spark,
-        x: px + Math.cos(angle) * speed,
-        y: py + Math.sin(angle) * speed - Phaser.Math.FloatBetween(0, 35),
-        alpha: 0, scaleX: 0, scaleY: 0,
-        duration: Phaser.Math.Between(300, 620),
-        ease: 'Power2.easeOut',
-        onComplete: () => spark.destroy(),
-      });
-    }
   }
 
   // ── CREATE ROOM ───────────────────────────────────────────────────────────────

@@ -1,8 +1,10 @@
 import type { PlayerData } from "../types/player";
+import { getLayout } from "../utils/layout";
 
 export function createHud(scene: Phaser.Scene) {
-  const hudText = scene.add.text(14, 12, "", {
-    fontSize: "13px",
+  const l = getLayout(scene.scale.width, scene.scale.height);
+  const hudText = scene.add.text(Math.round(14 + l.safeLeft), Math.round(12 + l.safeTop), "", {
+    fontSize: `${Math.max(13, Math.round(l.fs(13)))}px`,
     color: "#9aeeff",
     backgroundColor: "rgba(2,10,20,0.72)",
     padding: { x: 10, y: 6 },
