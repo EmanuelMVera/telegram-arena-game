@@ -11,16 +11,16 @@ export interface PlayerConfig {
 // ── Tuning knobs ──────────────────────────────────────────────────────────────
 // Change these constants to adjust size, hitbox and jump feel without touching logic.
 
-const PLAYER_SCALE = 140;   // display size (px). Raise → bigger character.
+const PLAYER_SCALE = 180;   // display size (px). Raise → bigger character.
 
 // Physics hitbox — smaller than display so the character doesn't "float"
-const BODY_W = 52;
-const BODY_H = 100;
+const BODY_W = 66;
+const BODY_H = 124;
 
 // FOOT_INSET: transparent space below the feet inside the sprite frame (px).
 // 0 → body bottom = sprite bottom exactly.
 // Increase if the character appears to float above the ground.
-const FOOT_INSET = 4;
+const FOOT_INSET = 0;
 
 // Jump spritesheet fps (man-jump and man-attack share the same source rate)
 const JUMP_FPS = 14;

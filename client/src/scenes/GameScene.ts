@@ -50,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   private readonly localAttackCooldown = 500;
   private readonly worldWidth = 2200;
   private readonly worldHeight = 980;
+  private readonly defaultSpawn = { x: 1100, y: 760 };
 
   constructor() { super('GameScene'); }
 
@@ -192,7 +193,8 @@ export class GameScene extends Phaser.Scene {
 
   private safeFrames(textureKey: string, desiredStart: number, desiredEnd: number) {
     const texture = this.textures.get(textureKey);
-    const maxFrameIndex = Math.max(0, texture.frameTotal - 2); // frameTotal includes __BASE
+    const frameNames = texture.getFrameNames().filter((n) => n !== '__BASE');
+    const maxFrameIndex = Math.max(0, frameNames.length - 1);
     const start = Phaser.Math.Clamp(desiredStart, 0, maxFrameIndex);
     const end = Phaser.Math.Clamp(desiredEnd, start, maxFrameIndex);
     if (start !== desiredStart || end !== desiredEnd) {
@@ -307,6 +309,10 @@ export class GameScene extends Phaser.Scene {
     // === GROUND ===
     const ground = this.add.rectangle(this.worldWidth / 2, this.worldHeight - 20, this.worldWidth, 40, 0x070e1a).setDepth(1);
     this.physics.add.existing(ground, true);
+    const groundBody = ground.body as Phaser.Physics.Arcade.StaticBody;
+    groundBody.setSize(this.worldWidth, 24);
+    groundBody.setOffset(-this.worldWidth / 2, -12);
+    groundBody.updateFromGameObject();
     this.colliders.push(ground);
     this.add.rectangle(this.worldWidth / 2, this.worldHeight - 40, this.worldWidth, 2, 0x5ee8ff, 0.18).setDepth(2);
     const crackG = this.add.graphics().setDepth(2);
@@ -434,7 +440,7 @@ export class GameScene extends Phaser.Scene {
   // ── LOCAL PLAYER ─────────────────────────────────────────────────────────────
 
   private createLocalPlayer() {
-    this.localPlayer = new Player(this, 1100, 860, {
+    this.localPlayer = new Player(this, this.defaultSpawn.x, this.defaultSpawn.y, {
       isLocal: true,
       name: getPlayerDisplayName(),
       depth: 6,
@@ -597,7 +603,7 @@ export class GameScene extends Phaser.Scene {
     this.localPlayer.die(() => {
       this.time.delayedCall(250, () => {
         this.isDying = false;
-        const pos = this.pendingRespawnPosition ?? { x: 1100, y: 860 };
+        const pos = this.pendingRespawnPosition ?? this.defaultSpawn;
         this.localPlayer.respawn(pos.x, pos.y);
         this.pendingRespawnPosition = null;
       });
