@@ -148,32 +148,34 @@ export class GameScene extends Phaser.Scene {
   private createAnimations() {
     if (this.anims.exists('man-idle')) return;
 
+    this.validatePlayerTextures();
+
     // Attack: 7 frames at 14 fps, plays once
     this.anims.create({
       key: 'man-attack',
-      frames: this.anims.generateFrameNumbers('man-attack', { start: 0, end: 6 }),
+      frames: this.safeFrames('man-attack', 0, 6),
       frameRate: 14, repeat: 0,
     });
 
     // Jump phases: all from the 11-frame spritesheet
     this.anims.create({
       key: 'man-jump-start',
-      frames: this.anims.generateFrameNumbers('man-jump', { start: 0, end: 5 }),
+      frames: this.safeFrames('man-jump', 0, 5),
       frameRate: 14, repeat: 0,
     });
     this.anims.create({
       key: 'man-jump-air',
-      frames: this.anims.generateFrameNumbers('man-jump', { start: 6, end: 6 }),
+      frames: this.safeFrames('man-jump', 6, 6),
       frameRate: 1, repeat: -1,
     });
     this.anims.create({
       key: 'man-jump-preland',
-      frames: this.anims.generateFrameNumbers('man-jump', { start: 7, end: 7 }),
+      frames: this.safeFrames('man-jump', 7, 7),
       frameRate: 1, repeat: -1,
     });
     this.anims.create({
       key: 'man-jump-land',
-      frames: this.anims.generateFrameNumbers('man-jump', { start: 8, end: 10 }),
+      frames: this.safeFrames('man-jump', 8, 10),
       frameRate: 12, repeat: 0,
     });
 
@@ -185,6 +187,28 @@ export class GameScene extends Phaser.Scene {
     const once: string[] = ['man-hurt', 'man-death', 'man-parry'];
     once.forEach((key) => {
       this.anims.create({ key, frames: [{ key }], frameRate: 1, repeat: 0 });
+    });
+  }
+
+  private safeFrames(textureKey: string, desiredStart: number, desiredEnd: number) {
+    const texture = this.textures.get(textureKey);
+    const maxFrameIndex = Math.max(0, texture.frameTotal - 2); // frameTotal includes __BASE
+    const start = Phaser.Math.Clamp(desiredStart, 0, maxFrameIndex);
+    const end = Phaser.Math.Clamp(desiredEnd, start, maxFrameIndex);
+    if (start !== desiredStart || end !== desiredEnd) {
+      console.warn(
+        `[GameScene] Adjusted frame range for "${textureKey}" from ${desiredStart}-${desiredEnd} to ${start}-${end}.`,
+      );
+    }
+    return this.anims.generateFrameNumbers(textureKey, { start, end });
+  }
+
+  private validatePlayerTextures() {
+    const requiredTextureKeys = ['man-idle', 'man-run', 'man-fall', 'man-hurt', 'man-death', 'man-parry', 'man-attack', 'man-jump'];
+    requiredTextureKeys.forEach((key) => {
+      if (!this.textures.exists(key)) {
+        console.warn(`[GameScene] Missing texture key "${key}".`);
+      }
     });
   }
 

@@ -55,6 +55,7 @@ export class Player {
   private jumpPhase: JumpPhase = 'none';
   private wasGrounded = true;
   private isAttacking = false;
+  private readonly idleFallbackAnim = 'man-idle';
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: PlayerConfig) {
     this.scene    = scene;
@@ -65,8 +66,9 @@ export class Player {
 
     this.sprite = scene.physics.add.sprite(x, y, 'man-idle')
       .setDisplaySize(PLAYER_SCALE, PLAYER_SCALE)
+      .setOrigin(0.5, 1)
       .setDepth(depth)
-      .play('man-idle');
+      .play(this.idleFallbackAnim);
 
     if (config.isLocal) {
       this.sprite
@@ -90,7 +92,7 @@ export class Player {
       });
     }
 
-    const labelY = y - PLAYER_SCALE / 2 - 16;
+    const labelY = y - PLAYER_SCALE - 16;
     this.nameText = scene.add.text(x, labelY, config.name, {
       fontSize: '12px', color: '#e9feff',
       backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 4, y: 2 },
@@ -133,13 +135,13 @@ export class Player {
       // Coyote-time jump: no startup animation, instant takeoff
       applyVelocity();
       this.jumpPhase = 'air_up';
-      this.sprite.play('man-jump-air', true);
+      this.playAnimSafe('man-jump-air');
       return true;
     }
 
     // Normal ground jump: startup frames first, then physics
     this.jumpPhase = 'jump_start';
-    this.sprite.play('man-jump-start', true);
+    this.playAnimSafe('man-jump-start');
 
     // Apply physics velocity at the takeoff frame boundary
     this.scene.time.delayedCall(TAKEOFF_PHYSICS_MS, () => {
@@ -154,7 +156,7 @@ export class Player {
     this.sprite.once('animationcomplete-man-jump-start', () => {
       if (this.jumpPhase === 'jump_start' && this.sprite.active) {
         this.jumpPhase = 'air_up';
-        this.sprite.play('man-jump-air', true);
+        this.playAnimSafe('man-jump-air');
       }
     });
 
@@ -176,7 +178,7 @@ export class Player {
     const justLanded = !this.wasGrounded && isGrounded;
     if (justLanded && this.jumpPhase !== 'none' && this.jumpPhase !== 'jump_start' && this.jumpPhase !== 'land') {
       this.jumpPhase = 'land';
-      this.sprite.play('man-jump-land', true);
+      this.playAnimSafe('man-jump-land');
       this.sprite.once('animationcomplete-man-jump-land', () => {
         this.jumpPhase = 'none';
       });
@@ -197,13 +199,13 @@ export class Player {
       if (this.jumpPhase === 'none') {
         // Spontaneous fall (walked off a ledge with no jump)
         this.jumpPhase = velY >= 0 ? 'air_down' : 'air_up';
-        this.sprite.play(this.jumpPhase === 'air_down' ? 'man-jump-preland' : 'man-jump-air', true);
+        this.playAnimSafe(this.jumpPhase === 'air_down' ? 'man-jump-preland' : 'man-jump-air');
       } else if (velY > 80 && this.jumpPhase !== 'air_down') {
         this.jumpPhase = 'air_down';
-        this.sprite.play('man-jump-preland', true);
+        this.playAnimSafe('man-jump-preland');
       } else if (velY <= 80 && this.jumpPhase !== 'air_up') {
         this.jumpPhase = 'air_up';
-        this.sprite.play('man-jump-air', true);
+        this.playAnimSafe('man-jump-air');
       }
       this.wasGrounded = isGrounded;
       return;
@@ -211,7 +213,7 @@ export class Player {
 
     // ── Ground locomotion ─────────────────────────────────────────────────────
     if (this.jumpPhase === 'none') {
-      this.sprite.play(Math.abs(velX) > 30 ? 'man-run' : 'man-idle', true);
+      this.playAnimSafe(Math.abs(velX) > 30 ? 'man-run' : 'man-idle');
     }
 
     this.wasGrounded = isGrounded;
@@ -227,7 +229,7 @@ export class Player {
     if (this.jumpPhase === 'jump_start') this.jumpPhase = 'none';
 
     this.isAttacking = true;
-    this.sprite.play('man-attack', true);
+    this.playAnimSafe('man-attack');
 
     this.scene.time.delayedCall(ATTACK_HIT_DELAY, () => {
       if (this.sprite.active) onHitFrame?.();
@@ -247,7 +249,7 @@ export class Player {
     if (!this.sprite.active || this.isAttacking) return;
     // Hurt cancels any pending jump startup so velocity is never applied silently
     if (this.jumpPhase === 'jump_start') this.jumpPhase = 'none';
-    this.sprite.play('man-hurt', true);
+    this.playAnimSafe('man-hurt');
     this.scene.time.delayedCall(220, () => {
       if (this.sprite.active && !this.isAttacking) this.resumeAfterInterrupt();
     });
@@ -258,7 +260,7 @@ export class Player {
   updateUi(name: string, hp: number) {
     const nx = this.sprite.x;
     const ny = this.sprite.y;
-    this.nameText.setText(name).setPosition(nx, ny - PLAYER_SCALE / 2 - 16);
+    this.nameText.setText(name).setPosition(nx, ny - PLAYER_SCALE - 16);
     this.hpBar.setPosition(0, 0);
     this.drawHp(hp);
     if (this.glow) this.glow.setPosition(nx, ny);
@@ -266,7 +268,7 @@ export class Player {
 
   private drawHp(hp: number) {
     const x = this.sprite.x;
-    const y = this.sprite.y - PLAYER_SCALE / 2 + 4;
+    const y = this.sprite.y - PLAYER_SCALE + 4;
     const w = 60, h = 6, fill = Phaser.Math.Clamp(hp, 0, 100) / 100;
     this.hpBar.clear();
     this.hpBar.fillStyle(0x050c13, 0.9).fillRoundedRect(x - w / 2, y, w, h, 3);
@@ -308,7 +310,7 @@ export class Player {
   }
 
   die(onComplete: () => void) {
-    this.sprite.play('man-death', true);
+    this.playAnimSafe('man-death');
     this.scene.tweens.add({
       targets: this.sprite, alpha: 0, duration: 550, ease: 'Power2',
       onComplete: () => onComplete(),
@@ -320,7 +322,7 @@ export class Player {
     this.jumpPhase   = 'none';
     this.wasGrounded = true;
     this.sprite.setAlpha(1).clearTint().setPosition(x, y);
-    this.sprite.play('man-idle', true);
+    this.playAnimSafe(this.idleFallbackAnim);
   }
 
   // ── Visibility ────────────────────────────────────────────────────────────────
@@ -367,6 +369,18 @@ export class Player {
         break;
       default: // air_up
         this.sprite.play('man-jump-air', true);
+    }
+  }
+
+  private playAnimSafe(animKey: string) {
+    if (this.scene.anims.exists(animKey)) {
+      this.sprite.play(animKey, true);
+      return;
+    }
+
+    console.warn(`[Player] Missing animation "${animKey}". Falling back to "${this.idleFallbackAnim}".`);
+    if (this.scene.anims.exists(this.idleFallbackAnim)) {
+      this.sprite.play(this.idleFallbackAnim, true);
     }
   }
 }
