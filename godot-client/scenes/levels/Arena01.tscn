@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://c1aokapr2weof"]
+
+[ext_resource type="Texture2D" uid="uid://7mhaltuwqh5c" path="res://assets/environment/arena01/Tiles/Tile_02.png" id="1_6bobl"]
+[ext_resource type="Texture2D" uid="uid://dbnq1tj87t327" path="res://assets/characters/Wraith_01/parts/Body.png" id="2_paou1"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_adehd"]
+size = Vector2(1200, 32)
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_iigrk"]
+radius = 18.0
+height = 70.0
+
+[node name="Arena01" type="Node2D" unique_id=1469619854]
+
+[node name="Ground" type="StaticBody2D" parent="." unique_id=1056375825]
+position = Vector2(600, 320)
+
+[node name="Sprite2D" type="Sprite2D" parent="Ground" unique_id=756002484]
+position = Vector2(-2.7119427, 1)
+scale = Vector2(37.544506, 1)
+texture = ExtResource("1_6bobl")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground" unique_id=75425832]
+shape = SubResource("RectangleShape2D_adehd")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=2095185295]
+position = Vector2(400, 250)
+
+[node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=103248061]
+position = Vector2(-11.000008, 7)
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("2_paou1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=248724130]
+shape = SubResource("CapsuleShape2D_iigrk")

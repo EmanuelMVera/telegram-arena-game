@@ -38,3 +38,25 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Godot
+godot-client/.godot/
+godot-client/.import/
+godot-client/android/
+godot-client/export.cfg
+godot-client/export_presets.cfg
+
+# Godot exports / builds
+godot-web/
+godot-client/godot-web/
+godot-client/build/
+godot-client/dist/
+godot-client/exports/
+
+# Archivos pesados/fuente que no conviene subir
+*.psd
+*.kra
+*.aseprite
+*.zip
+*.rar
+*.7z

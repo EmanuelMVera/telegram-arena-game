@@ -1,0 +1,22 @@
+# Godot 4+ cache/editor local
+.godot/
+.import/
+android/
+
+# Exports / builds
+godot-web/
+build/
+dist/
+exports/
+
+# Export config
+export.cfg
+export_presets.cfg
+
+# Source art / heavy files
+*.psd
+*.kra
+*.aseprite
+*.zip
+*.rar
+*.7z
