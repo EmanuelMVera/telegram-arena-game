@@ -119,6 +119,9 @@ animations = [{
 radius = 18.0
 height = 70.0
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wjllf"]
+size = Vector2(220, 31)
+
 [node name="Arena01" type="Node2D" unique_id=1469619854]
 
 [node name="Ground" type="StaticBody2D" parent="." unique_id=1056375825]
@@ -147,3 +150,15 @@ shape = SubResource("CapsuleShape2D_iigrk")
 
 [node name="Camera2D" type="Camera2D" parent="Player" unique_id=180245597]
 position_smoothing_enabled = true
+
+[node name="plataform01" type="StaticBody2D" parent="." unique_id=1216869625]
+position = Vector2(650, 230)
+
+[node name="Sprite2D" type="Sprite2D" parent="plataform01" unique_id=398843320]
+position = Vector2(1.9999961, 45.999996)
+scale = Vector2(6.84375, 1)
+texture = ExtResource("1_6bobl")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="plataform01" unique_id=1019643249]
+position = Vector2(1, 47)
+shape = SubResource("RectangleShape2D_wjllf")
