@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://c1aokapr2weof"]
 
 [ext_resource type="Texture2D" uid="uid://7mhaltuwqh5c" path="res://assets/environment/arena01/Tiles/Tile_02.png" id="1_6bobl"]
-[ext_resource type="Texture2D" uid="uid://dbnq1tj87t327" path="res://assets/characters/Wraith_01/parts/Body.png" id="2_paou1"]
+[ext_resource type="Script" uid="uid://cytcqtefmiqja" path="res://scripts/characters/player.gd" id="2_paou1"]
+[ext_resource type="Texture2D" uid="uid://dmvfbannf1a52" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_000.png" id="3_adehd"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_adehd"]
 size = Vector2(1200, 32)
@@ -25,11 +26,15 @@ shape = SubResource("RectangleShape2D_adehd")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=2095185295]
 position = Vector2(400, 250)
+script = ExtResource("2_paou1")
 
 [node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=103248061]
-position = Vector2(-11.000008, 7)
-scale = Vector2(0.8, 0.8)
-texture = ExtResource("2_paou1")
+position = Vector2(0, 1)
+scale = Vector2(0.4, 0.43)
+texture = ExtResource("3_adehd")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=248724130]
 shape = SubResource("CapsuleShape2D_iigrk")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=180245597]
+position_smoothing_enabled = true
