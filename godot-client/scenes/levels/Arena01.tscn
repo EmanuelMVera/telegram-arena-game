@@ -3,35 +3,175 @@
 [ext_resource type="Texture2D" uid="uid://7mhaltuwqh5c" path="res://assets/environment/arena01/Tiles/Tile_02.png" id="1_6bobl"]
 [ext_resource type="Script" uid="uid://cytcqtefmiqja" path="res://scripts/characters/player.gd" id="2_paou1"]
 [ext_resource type="Texture2D" uid="uid://dmvfbannf1a52" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_000.png" id="3_adehd"]
+[ext_resource type="Texture2D" uid="uid://bar6wumphgtjk" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_000.png" id="3_yobui"]
+[ext_resource type="Texture2D" uid="uid://cktnuxo056db3" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_001.png" id="4_o7lpw"]
 [ext_resource type="Texture2D" uid="uid://4d5rg6mjlx1t" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_001.png" id="4_wjllf"]
+[ext_resource type="Texture2D" uid="uid://hyy4xre204g" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_002.png" id="5_e842o"]
 [ext_resource type="Texture2D" uid="uid://dmg1jj3tp10d" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_002.png" id="5_t76bb"]
 [ext_resource type="Texture2D" uid="uid://r2hyd8haigpd" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_003.png" id="6_5vv7w"]
+[ext_resource type="Texture2D" uid="uid://cx4t01ksx4kiw" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_003.png" id="6_od5k4"]
 [ext_resource type="Texture2D" uid="uid://ble80qq6bq8m6" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_004.png" id="7_neo4f"]
+[ext_resource type="Texture2D" uid="uid://i7062meetkwg" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_004.png" id="7_rgfty"]
+[ext_resource type="Texture2D" uid="uid://bvpfwxhr0ba40" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_005.png" id="8_84c78"]
 [ext_resource type="Texture2D" uid="uid://bn5sjb88cwy26" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_005.png" id="8_sgwa7"]
+[ext_resource type="Texture2D" uid="uid://btr3yrfdhi3qe" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_006.png" id="9_2iq34"]
 [ext_resource type="Texture2D" uid="uid://cj31ighkdivw0" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_006.png" id="9_bb8be"]
 [ext_resource type="Texture2D" uid="uid://bd4sei8vo1y2u" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_007.png" id="10_s10n1"]
+[ext_resource type="Texture2D" uid="uid://bko0i8dus7jfu" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_007.png" id="10_wyh5e"]
+[ext_resource type="Texture2D" uid="uid://hwmlbu8rews1" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_008.png" id="11_lwfeg"]
 [ext_resource type="Texture2D" uid="uid://br2vds0eeeilp" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_008.png" id="11_tw4p1"]
+[ext_resource type="Texture2D" uid="uid://by3rmvnw0u0s" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_009.png" id="12_5s7oe"]
 [ext_resource type="Texture2D" uid="uid://b1jheppdms4yb" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_009.png" id="12_wwd30"]
+[ext_resource type="Texture2D" uid="uid://dw4254v7lnit1" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_010.png" id="13_chc8g"]
 [ext_resource type="Texture2D" uid="uid://csewuekwikupg" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_010.png" id="13_wqllj"]
+[ext_resource type="Texture2D" uid="uid://b0wcdh3e4fs83" path="res://assets/characters/Wraith_01/animations/Attacking/Wraith_01_Attack_011.png" id="14_l77cr"]
 [ext_resource type="Texture2D" uid="uid://q6q6n0cjjeyi" path="res://assets/characters/Wraith_01/animations/Idle/Wraith_01_Idle_011.png" id="14_n7kc5"]
 [ext_resource type="Texture2D" uid="uid://dfjdlpvcvkbi7" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_000.png" id="15_6wq0r"]
+[ext_resource type="Texture2D" uid="uid://bp8yr7xw2it4d" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_000.png" id="15_eqhp7"]
+[ext_resource type="Texture2D" uid="uid://drsqfupbd4g1v" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_001.png" id="16_iyg1s"]
 [ext_resource type="Texture2D" uid="uid://ucn3k4vx5ud3" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_001.png" id="16_yobui"]
+[ext_resource type="Texture2D" uid="uid://bt8s36ng7566l" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_002.png" id="17_ei0hk"]
 [ext_resource type="Texture2D" uid="uid://1gu2cc6sn3c3" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_002.png" id="17_o7lpw"]
 [ext_resource type="Texture2D" uid="uid://b5vdm8oygss2i" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_003.png" id="18_e842o"]
+[ext_resource type="Texture2D" uid="uid://ws6lqsna4j1j" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_003.png" id="18_vjjq1"]
+[ext_resource type="Texture2D" uid="uid://mewn5u0qi5pm" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_004.png" id="19_6gtk4"]
 [ext_resource type="Texture2D" uid="uid://tc6jt646sx2y" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_004.png" id="19_od5k4"]
+[ext_resource type="Texture2D" uid="uid://bmp4qk60gkvsh" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_005.png" id="20_kqlt3"]
 [ext_resource type="Texture2D" uid="uid://buxjh0lvigmj1" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_005.png" id="20_rgfty"]
 [ext_resource type="Texture2D" uid="uid://b3e2ud2qa2ktf" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_006.png" id="21_84c78"]
+[ext_resource type="Texture2D" uid="uid://cenx82eswnkc5" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_006.png" id="21_j6hey"]
 [ext_resource type="Texture2D" uid="uid://cxj7fx5cqqmlw" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_007.png" id="22_2iq34"]
+[ext_resource type="Texture2D" uid="uid://rs2pywwptvua" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_007.png" id="22_qtc52"]
+[ext_resource type="Texture2D" uid="uid://dj4qph2arl2co" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_008.png" id="23_cbvu8"]
 [ext_resource type="Texture2D" uid="uid://d0u3tsibs1ids" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_008.png" id="23_wyh5e"]
+[ext_resource type="Texture2D" uid="uid://cth0cxp1gt2xo" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_009.png" id="24_c0nqd"]
 [ext_resource type="Texture2D" uid="uid://bwpau3xb3p41j" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_009.png" id="24_lwfeg"]
 [ext_resource type="Texture2D" uid="uid://b3vhknttwlivv" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_010.png" id="25_5s7oe"]
+[ext_resource type="Texture2D" uid="uid://s1fw8l3twdwp" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_010.png" id="25_un7ly"]
 [ext_resource type="Texture2D" uid="uid://c407rpyruo5i4" path="res://assets/characters/Wraith_01/animations/Walking/Wraith_01_Moving Forward_011.png" id="26_chc8g"]
+[ext_resource type="Texture2D" uid="uid://c6182whpf6ngu" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_011.png" id="26_ikyh5"]
+[ext_resource type="Texture2D" uid="uid://blq40qevrrp7q" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_012.png" id="27_02iph"]
+[ext_resource type="Texture2D" uid="uid://pivmoy3l4plj" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_013.png" id="28_u7wjv"]
+[ext_resource type="Texture2D" uid="uid://b8mxx8g8g5n6s" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_014.png" id="29_ar00p"]
+[ext_resource type="Texture2D" uid="uid://chrbb74o144n3" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_015.png" id="30_fs4w4"]
+[ext_resource type="Texture2D" uid="uid://dfvgrxp2ketxh" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_016.png" id="31_hil5o"]
+[ext_resource type="Texture2D" uid="uid://bfr11m8y8sira" path="res://assets/characters/Wraith_01/animations/Casting Spells/Wraith_01_Casting Spells_017.png" id="32_0oxqx"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_adehd"]
 size = Vector2(1200, 32)
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_l77cr"]
 animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_yobui")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_o7lpw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_e842o")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_od5k4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_rgfty")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_84c78")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_2iq34")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_wyh5e")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_lwfeg")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_5s7oe")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_chc8g")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_l77cr")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 18.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("15_eqhp7")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_iyg1s")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_ei0hk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_vjjq1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_6gtk4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_kqlt3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_j6hey")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22_qtc52")
+}, {
+"duration": 1.0,
+"texture": ExtResource("23_cbvu8")
+}, {
+"duration": 1.0,
+"texture": ExtResource("24_c0nqd")
+}, {
+"duration": 1.0,
+"texture": ExtResource("25_un7ly")
+}, {
+"duration": 1.0,
+"texture": ExtResource("26_ikyh5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("27_02iph")
+}, {
+"duration": 1.0,
+"texture": ExtResource("28_u7wjv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("29_ar00p")
+}, {
+"duration": 1.0,
+"texture": ExtResource("30_fs4w4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("31_hil5o")
+}, {
+"duration": 1.0,
+"texture": ExtResource("32_0oxqx")
+}],
+"loop": false,
+"name": &"cast",
+"speed": 18.0
+}, {
+"frames": [],
+"loop": true,
+"name": &"dying",
+"speed": 5.0
+}, {
+"frames": [],
+"loop": true,
+"name": &"hurt",
+"speed": 5.0
+}, {
 "frames": [{
 "duration": 1.0,
 "texture": ExtResource("3_adehd")
@@ -71,7 +211,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"idle",
-"speed": 6.0
+"speed": 12.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -143,7 +283,7 @@ script = ExtResource("2_paou1")
 position = Vector2(0, 1)
 scale = Vector2(0.4, 0.43)
 sprite_frames = SubResource("SpriteFrames_l77cr")
-animation = &"idle"
+animation = &"attack"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=248724130]
 shape = SubResource("CapsuleShape2D_iigrk")
@@ -155,10 +295,10 @@ position_smoothing_enabled = true
 position = Vector2(650, 230)
 
 [node name="Sprite2D" type="Sprite2D" parent="plataform01" unique_id=398843320]
-position = Vector2(1.9999961, 45.999996)
+position = Vector2(4.9999957, 26.999996)
 scale = Vector2(6.84375, 1)
 texture = ExtResource("1_6bobl")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="plataform01" unique_id=1019643249]
-position = Vector2(1, 47)
+position = Vector2(4, 26)
 shape = SubResource("RectangleShape2D_wjllf")
