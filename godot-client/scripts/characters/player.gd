@@ -4,11 +4,11 @@ const SPEED := 220.0
 const JUMP_VELOCITY := -420.0
 const GRAVITY := 1200.0
 
-const PROJECTILE_SPEED := 520.0
-const PROJECTILE_LIFETIME := 1.2
-
 const MELEE_COOLDOWN := 0.45
 const CAST_COOLDOWN := 0.85
+
+const MAGIC_SLASH_SCENE := preload("res://scenes/objects/MagicSlash.tscn")
+const ENERGY_PROJECTILE_SCENE := preload("res://scenes/objects/EnergyProjectile.tscn")
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -103,93 +103,19 @@ func cast_projectile() -> void:
 
 
 func spawn_melee_slash() -> void:
-	var slash := Area2D.new()
-	slash.name = "MagicMeleeSlash"
-
-	var collision := CollisionShape2D.new()
-	var shape := RectangleShape2D.new()
-	shape.size = Vector2(42, 76)
-	collision.shape = shape
-
-	var visual := ColorRect.new()
-	visual.color = Color(0.3, 0.95, 1.0, 0.55)
-	visual.size = Vector2(42, 76)
-	visual.position = Vector2(-21, -38)
-
-	slash.add_child(visual)
-	slash.add_child(collision)
+	var slash := MAGIC_SLASH_SCENE.instantiate()
 
 	var spawn_offset := Vector2(34 * facing_direction, -30)
 	slash.global_position = global_position + spawn_offset
 
 	get_tree().current_scene.add_child(slash)
-
-	var slash_ref: WeakRef = weakref(slash)
-
-	var start_y := slash.global_position.y + 24
-	var end_y := slash.global_position.y - 34
-	slash.global_position.y = start_y
-
-	slash.body_entered.connect(func(_body: Node) -> void:
-		var s := slash_ref.get_ref() as Area2D
-		if s != null:
-			print("Melee hit")
-	)
-
-	var tween := create_tween()
-	tween.parallel().tween_property(slash, "global_position:y", end_y, 0.12)
-	tween.parallel().tween_property(slash, "modulate:a", 0.0, 0.12)
-
-	tween.finished.connect(func() -> void:
-		var s := slash_ref.get_ref() as Area2D
-		if s != null and not s.is_queued_for_deletion():
-			s.queue_free()
-	)
-
+	slash.setup(facing_direction)
 
 func spawn_projectile() -> void:
-	var projectile := Area2D.new()
-	projectile.name = "EnergyProjectile"
-
-	var collision := CollisionShape2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = 8
-	collision.shape = shape
-
-	var visual := ColorRect.new()
-	visual.color = Color(0.3, 0.95, 1.0, 1.0)
-	visual.size = Vector2(18, 18)
-	visual.position = Vector2(-9, -9)
-
-	projectile.add_child(visual)
-	projectile.add_child(collision)
+	var projectile := ENERGY_PROJECTILE_SCENE.instantiate()
 
 	var spawn_offset := Vector2(34 * facing_direction, -26)
 	projectile.global_position = global_position + spawn_offset
 
 	get_tree().current_scene.add_child(projectile)
-
-	var projectile_ref: WeakRef = weakref(projectile)
-
-	var direction := Vector2(facing_direction, 0)
-	var lifetime := PROJECTILE_LIFETIME
-
-	projectile.body_entered.connect(func(_body: Node) -> void:
-		var p := projectile_ref.get_ref() as Area2D
-		if p != null and not p.is_queued_for_deletion():
-			p.queue_free()
-	)
-
-	var tween := create_tween()
-	tween.tween_property(
-		projectile,
-		"global_position",
-		projectile.global_position + direction * PROJECTILE_SPEED * lifetime,
-		lifetime
-	)
-
-	tween.finished.connect(func() -> void:
-		var p := projectile_ref.get_ref() as Area2D
-		if p != null and not p.is_queued_for_deletion():
-			p.queue_free()
-	)
+	projectile.setup(Vector2(facing_direction, 0))

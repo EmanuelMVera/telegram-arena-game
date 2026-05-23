@@ -1,0 +1,109 @@
+[gd_scene format=3 uid="uid://cryucb4p85pve"]
+
+[ext_resource type="Texture2D" uid="uid://yahv2tajkvx2" path="res://assets/effects/projectiles/water_projectile/water100000.png" id="1_nfwkw"]
+[ext_resource type="Script" uid="uid://kmwq1tgpqmng" path="res://scenes/objects/energy_projectile.gd" id="1_njgxa"]
+[ext_resource type="Texture2D" uid="uid://b2q2e5yrvc7ht" path="res://assets/effects/projectiles/water_projectile/water100001.png" id="2_njgxa"]
+[ext_resource type="Texture2D" uid="uid://bj1217qudcwl5" path="res://assets/effects/projectiles/water_projectile/water100002.png" id="3_74614"]
+[ext_resource type="Texture2D" uid="uid://xo0487u0wclp" path="res://assets/effects/projectiles/water_projectile/water100003.png" id="4_lqgdj"]
+[ext_resource type="Texture2D" uid="uid://dj4llfp1qlmvf" path="res://assets/effects/projectiles/water_projectile/water100004.png" id="5_e2bc2"]
+[ext_resource type="Texture2D" uid="uid://ctpedhno76euu" path="res://assets/effects/projectiles/water_projectile/water100005.png" id="6_7es7c"]
+[ext_resource type="Texture2D" uid="uid://dj8krcb71k0pq" path="res://assets/effects/projectiles/water_projectile/water100006.png" id="7_xsv2t"]
+[ext_resource type="Texture2D" uid="uid://cxqssvmxtf318" path="res://assets/effects/projectiles/water_projectile/water100007.png" id="8_noqkr"]
+[ext_resource type="Texture2D" uid="uid://c5gcgthfpjoop" path="res://assets/effects/projectiles/water_projectile/water100008.png" id="9_swbdc"]
+[ext_resource type="Texture2D" uid="uid://dhixobqrb86v2" path="res://assets/effects/projectiles/water_projectile/water100009.png" id="10_2daef"]
+[ext_resource type="Texture2D" uid="uid://dygf7nipds7le" path="res://assets/effects/projectiles/water_projectile/water100010.png" id="11_yx5qr"]
+[ext_resource type="Texture2D" uid="uid://wmotno602l62" path="res://assets/effects/projectiles/water_projectile/water100011.png" id="12_ftp4r"]
+[ext_resource type="Texture2D" uid="uid://cs6ch1coftvmq" path="res://assets/effects/projectiles/water_projectile/water100012.png" id="13_iqy0q"]
+[ext_resource type="Texture2D" uid="uid://cxnugmm87vnp3" path="res://assets/effects/projectiles/water_projectile/water100013.png" id="14_40y3v"]
+[ext_resource type="Texture2D" uid="uid://bwus3ekmoxw2a" path="res://assets/effects/projectiles/water_projectile/water100014.png" id="15_rt7ls"]
+[ext_resource type="Texture2D" uid="uid://wf2tap7l5236" path="res://assets/effects/projectiles/water_projectile/water100015.png" id="16_omwaw"]
+[ext_resource type="Texture2D" uid="uid://bhmu2f12a1dn6" path="res://assets/effects/projectiles/water_projectile/water100016.png" id="17_rjfrs"]
+[ext_resource type="Texture2D" uid="uid://b2vta6h2nhiiq" path="res://assets/effects/projectiles/water_projectile/water100017.png" id="18_tvl2a"]
+[ext_resource type="Texture2D" uid="uid://bkl4yhmyehkj5" path="res://assets/effects/projectiles/water_projectile/water100018.png" id="19_jhpof"]
+[ext_resource type="Texture2D" uid="uid://dogd5t2sp600x" path="res://assets/effects/projectiles/water_projectile/water100019.png" id="20_8puje"]
+[ext_resource type="Texture2D" uid="uid://cdk8cpldwnk26" path="res://assets/effects/projectiles/water_projectile/water100020.png" id="21_md6xo"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_5ikbk"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_nfwkw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_njgxa")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_74614")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_lqgdj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_e2bc2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_7es7c")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_xsv2t")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_noqkr")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_swbdc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_2daef")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_yx5qr")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_ftp4r")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_iqy0q")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_40y3v")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_rt7ls")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_omwaw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_rjfrs")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_tvl2a")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_jhpof")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_8puje")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_md6xo")
+}],
+"loop": true,
+"name": &"travel",
+"speed": 14.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wp4ce"]
+radius = 8.0
+
+[node name="EnergyProjectile" type="Area2D" unique_id=529883074]
+script = ExtResource("1_njgxa")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=858871805]
+scale = Vector2(0.1, 0.1)
+sprite_frames = SubResource("SpriteFrames_5ikbk")
+animation = &"travel"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2123096675]
+shape = SubResource("CircleShape2D_wp4ce")
